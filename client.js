@@ -742,7 +742,10 @@ window.__ModuleLoader__.load({
             label: () => attentionCount > 0 ? `接力 ${attentionCount}` : '接力',
           }, SidebarBatonIcon)
         }
-        ctx.slots.inject('sidebar.panellist', () => { mountPane() })
+        ctx.slots.inject('sidebar.panellist', () => {
+          mountPane()
+          return () => { paneDispose?.(); paneDispose = undefined }
+        })
         const unsubscribeCount = subscribeCount(() => { if (paneDispose) mountPane() })
         ctx.effect(() => () => { unsubscribeCount(); paneDispose?.() }, 'baton: sidebar panel label')
         ctx.slots.inject('main', () => ctx.slots.register({ name: 'main', key: 'baton' }, MainPanel))
