@@ -13,6 +13,10 @@ const me = { userId: '11111111-1111-4111-8111-111111111111', displayName: '海�
 const lin = { userId: '22222222-2222-4222-8222-222222222222', displayName: '林予安', online: true }
 const chen = { userId: '33333333-3333-4333-8333-333333333333', displayName: '陈知行', online: true }
 const xu = { userId: '44444444-4444-4444-8444-444444444444', displayName: '许棠', online: false }
+me.environments = [{ key: 'frontend', label: '前端工作区' }, { key: 'backend', label: '后端工作区' }]
+lin.environments = [{ key: 'frontend', label: '前端工作区' }, { key: 'design', label: '设计稿目录' }]
+chen.environments = [{ key: 'backend', label: '后端工作区' }]
+xu.environments = []
 const task = (id, title, from, to, env, status, minutes) => ({ taskId: '00000000-0000-4000-8000-' + String(id).padStart(12, '0'), room: 'GREEN8', title, from, to, env, status, createdAt: now - minutes * 60_000, expiresAt: now + 6 * 86_400_000 })
 const state = {
   ok: true, userId: me.userId, displayName: me.displayName, connection: { state: 'online' },
@@ -29,7 +33,7 @@ const state = {
     task(5, '完善自动化部署检查清单', me, chen, 'backend', 'accepted', 45),
     task(6, '评审消息中心的设计方案', me, xu, 'design', 'pending', 130),
   ],
-  local: {}, outbox: [], environments: [{ key: 'frontend', label: '前端工作区' }, { key: 'backend', label: '后端工作区' }],
+  local: {}, outbox: [], environments: [{ key: 'frontend', label: '前端工作区', cwd: '/example/workspace/web' }, { key: 'backend', label: '后端工作区', cwd: '/example/workspace/api' }],
 }
 state.local[state.tasks[3].taskId] = { taskId: state.tasks[3].taskId, phase: 'needs-review', sessionId: 'session-preview-existing', cwd: '/example/workspace/api' }
 const initialState = structuredClone(state)
@@ -73,10 +77,17 @@ const server = createServer(async (request, response) => {
       return send(response, { ok: true })
     }
     if (request.url !== '/api/baton') return send(response, { ok: false }, 404)
-    if (body.action === 'snapshot') return send(response, state)
+    if (body.action === 'snapshot') return send(response, { ...state, tasks: state.tasks.filter(task => (task.from.userId === state.userId ? task.fromVisibility : task.toVisibility) !== 'deleted') })
+    if (body.action === 'environments.list') return send(response, { ok: true, environments: state.environments })
+    if (body.action === 'environments.save') {
+      const next = Array.isArray(body.environments) ? body.environments.map(entry => ({ key: entry.key, label: entry.label, cwd: entry.cwd })) : []
+      state.environments = next
+      me.environments = next.map(({ key, label }) => ({ key, label }))
+      return send(response, { ok: true, environments: next, published: state.connection.state === 'online' })
+    }
     if (body.action === 'counts') {
       const records = state.local ?? {}
-      const mine = state.tasks.filter(task => task.to.userId === state.userId)
+      const mine = state.tasks.filter(task => task.to.userId === state.userId && (task.toVisibility ?? 'active') === 'active')
       return send(response, {
         ok: true,
         attention: mine.filter(task => task.status === 'pending' || (task.status === 'accepted' && ['unsubmitted', 'needs-review'].includes(records[task.taskId]?.phase ?? 'needs-review'))).length,
@@ -85,6 +96,16 @@ const server = createServer(async (request, response) => {
     }
     if (state.connection.state !== 'online') return send(response, { ok: false, code: 'connection-closed', error: '接力服务暂未连接，请连接后重试。' }, 503)
     const current = state.tasks.find(item => item.taskId === body.taskId)
+    if (body.action === 'session') return send(response, { ok: true, exists: Object.values(state.local).some(record => record.sessionId === body.sessionId) })
+    if (['archive', 'restore', 'delete'].includes(body.action)) {
+      if (!current) return send(response, { ok: false, code: 'not_found', error: '任务不存在' }, 404)
+      if (body.action === 'delete' && body.confirmed !== true) return send(response, { ok: false, code: 'invalid_request', error: '请确认永久删除' }, 400)
+      const field = current.from.userId === state.userId ? 'fromVisibility' : 'toVisibility'
+      current[field] = { archive: 'archived', restore: 'active', delete: 'deleted' }[body.action]
+      const purged = current.fromVisibility === 'deleted' && current.toVisibility === 'deleted'
+      if (purged) state.tasks = state.tasks.filter(task => task.taskId !== current.taskId)
+      return send(response, { ok: true, taskId: current.taskId, purged })
+    }
     if (body.action === 'detail') return send(response, { ok: true, task: current, brief, cwd: current?.env === 'backend' ? '/example/workspace/api' : directory, local: state.local[body.taskId] })
     if (body.action === 'accept' || body.action === 'resume') {
       if (controls.changeNextCwd) { controls.changeNextCwd = false; directory = '/example/workspace/new-web'; return send(response, { ok: false, code: 'cwd-changed', error: '执行目录已变化，请重新查看并确认目录后再接受。' }, 409) }

@@ -19,6 +19,7 @@ const SYNC_INTERVAL_MS = 60_000
 const MAX_REQUEST_BYTES = 32 * 1024
 const FATAL_CODES = new Set(['auth_failed', 'protocol_mismatch'])
 const connectionClosed = () => new BatonRequestError('connection-closed', 'connection closed')
+const advertisedEnvironments = (environments) => environments.map(({ key, label }) => ({ key, label }))
 
 export class BatonRequestError extends Error {
   constructor(code, message) {
@@ -61,12 +62,13 @@ export class BatonConnection {
    * @param {(event: object) => void} [options.onEvent]
    * @param {(status: {state: string, detail?: string}) => void} [options.onStatus]
    */
-  constructor({ serverUrl, secret, userId, displayName, onSnapshot, onEvent, onStatus }) {
+  constructor({ serverUrl, secret, userId, displayName, environments = [], onSnapshot, onEvent, onStatus }) {
     this.serverUrl = validateServerUrl(serverUrl)
     if (typeof secret !== 'string' || [...secret].length < 32) throw new Error('secret must be at least 32 characters')
     this.secret = secret
     this.userId = userId
     this.displayName = displayName
+    this.environments = advertisedEnvironments(environments)
     this.onSnapshot = onSnapshot
     this.onEvent = onEvent
     this.onStatus = onStatus ?? (() => {})
@@ -177,14 +179,19 @@ export class BatonConnection {
   }
 
   async authenticate(generation = this.generation) {
+    const environments = this.environments
     await this.request('hello', {
       protocolVersion: PROTOCOL_VERSION,
       secret: this.secret,
       userId: this.userId,
       displayName: this.displayName,
+      environments,
     })
     if (this.stopped || generation !== this.generation || !this.open) return
     this.authenticated = true
+    // An edit made while hello was in flight was not advertised by that hello.
+    if (environments !== this.environments) await this.setEnvironments(this.environments)
+    if (this.stopped || generation !== this.generation || !this.open) return
     this.attempts = 0
     this.syncTimer = setInterval(() => {
       this.sync().catch((error) => {
@@ -333,6 +340,15 @@ export class BatonConnection {
     }
   }
 
+  async setEnvironments(environments) {
+    this.environments = advertisedEnvironments(environments)
+    if (this.authenticated && this.open) {
+      await this.request('env.set', { environments: this.environments })
+      return { published: true }
+    }
+    return { published: false }
+  }
+
   async sync() {
     if (this.stopped || !this.authenticated || !this.open) throw connectionClosed()
     if (this.syncing) {
@@ -375,4 +391,7 @@ export class BatonConnection {
   taskSend(task) { return this.retryTask('task.send', task) }
   taskGet(taskId) { return this.request('task.get', { taskId }) }
   taskRespond(taskId, decision) { return this.retryTask('task.respond', { taskId, decision }) }
+  taskArchive(taskId) { return this.retryTask('task.archive', { taskId }) }
+  taskRestore(taskId) { return this.retryTask('task.restore', { taskId }) }
+  taskDelete(taskId) { return this.retryTask('task.delete', { taskId }) }
 }

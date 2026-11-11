@@ -11,7 +11,7 @@ const harness = (await build({
   stdin: {
     resolveDir: fileURLToPath(new URL('.', import.meta.url)),
     contents: `
-      import React, { useEffect } from 'react'
+      import React, { useState } from 'react'
       import { createRoot } from 'react-dom/client'
       const slots = new Map(), services = new Map()
       window.reviewServices = services
@@ -20,15 +20,15 @@ const harness = (await build({
         factory(name => { if (name === 'react') return React; throw new Error(name) }).apply({
           get(name) { return services.get(name) },
           effect(fn) { fn() },
-          slots: { inject(name, register) { register() }, register({ id }, component) { slots.set(id, component) } },
+          slots: { inject(name, register) { register() }, register({ name }, component) { slots.set(name, component); return () => {} } },
         })
       } }
       await import('../client.js')
       function App() {
-        useEffect(() => { document.querySelector('.bt-trigger')?.click() }, [])
-        return React.createElement(React.Fragment, null,
-          React.createElement(slots.get('baton-trigger')),
-          React.createElement(slots.get('baton-panel')))
+        const [navigated, setNavigated] = useState(false)
+        window.reviewOnNavigate = () => setNavigated(true)
+        return navigated ? React.createElement('div', {role:'status'}, 'Opened session') :
+          React.createElement('div', {style:{height:'100vh',display:'flex',minHeight:0}}, React.createElement(slots.get('main')))
       }
       createRoot(document.getElementById('root')).render(React.createElement(App))
     `,
@@ -69,7 +69,7 @@ try {
 
   await check('provider activated after plugin apply still opens accepted session', async page => {
     await page.evaluate(() => window.reviewServices.set('uiWorkspace', {
-      openSession(id) { window.reviewNavigations.push(id) },
+      openSession(id) { window.reviewNavigations.push(id); window.reviewOnNavigate() },
     }))
     await page.getByRole('button', { name: /登录页接口联调/ }).click()
     await page.getByRole('button', { name: '接受并启动', exact: true }).click()
@@ -90,7 +90,7 @@ try {
       assert.equal(Object.values(state.local).filter(record => record.phase === 'submitted').length, 1)
       // A later provider or retry must use the existing session, without resubmitting.
       await page.evaluate(() => window.reviewServices.set('uiWorkspace', {
-        openSession(id) { window.reviewNavigations.push(id) },
+        openSession(id) { window.reviewNavigations.push(id); window.reviewOnNavigate() },
       }))
       await page.route('**/api/baton', async route => {
         const body = route.request().postDataJSON()
@@ -108,6 +108,8 @@ try {
   await check('Escape closes environment menu before send dialog; Tab stays trapped', async page => {
     await page.getByRole('button', { name: '发起接力', exact: true }).click()
     const dialog = page.getByRole('dialog', { name: '发起一次接力' })
+    await dialog.locator('select').nth(0).selectOption('GREEN8')
+    await dialog.locator('select').nth(1).selectOption('22222222-2222-4222-8222-222222222222')
     const input = dialog.locator('input[role="combobox"]')
     await input.click()
     await expect(input).toHaveAttribute('aria-expanded', 'true')
@@ -126,9 +128,8 @@ try {
     await input.press('Escape')
     await expect(dialog).not.toBeVisible()
     await expect(page.locator('.bt-shell')).toBeVisible()
-    await page.getByRole('button', { name: '关闭接力', exact: true }).focus()
     await page.keyboard.press('Escape')
-    await expect(page.locator('.bt-shell')).not.toBeVisible()
+    await expect(page.locator('.bt-shell')).toBeVisible() // Embedded main pages stay open.
   }, true)
 } finally { await browser.close() }
 

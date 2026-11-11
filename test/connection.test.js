@@ -335,3 +335,54 @@ test('rate limiting business work fails queued work and prevents early reconnect
   await tick(1)
   assert.equal(Socket.instances.length, 2)
 })
+
+for (const action of ['Archive', 'Restore', 'Delete']) {
+  test(`task${action} retries uncertain writes with the same task id`, async (t) => {
+    const { client, online } = setup(t)
+    const socket = await online()
+    const result = client[`task${action}`]('stable-id')
+    const first = socket.sent.at(-1)
+    assert.equal(first.type, `task.${action.toLowerCase()}`)
+    socket.error('internal')
+    await flush()
+    const retry = socket.sent.at(-1)
+    assert.notEqual(retry.id, first.id)
+    assert.deepEqual(retry.data, { taskId: 'stable-id' })
+    socket.reply(undefined, { taskId: 'stable-id', purged: false })
+    assert.deepEqual(await result, { taskId: 'stable-id', purged: false })
+  })
+}
+
+test('environment publishing is awaitable, reports failures, and never sends cwd', async (t) => {
+  const { client, online } = setup(t, { environments: [{ key: 'initial', label: 'Initial', cwd: '/private/project' }] })
+  const socket = await online()
+  assert.deepEqual(socket.sent[0].data.environments, [{ key: 'initial', label: 'Initial' }])
+  const update = client.setEnvironments([{ key: 'next', label: 'Next', cwd: '/private/next' }])
+  const failed = assert.rejects(update, hasCode('internal'))
+  assert.deepEqual(socket.sent.at(-1).data, { environments: [{ key: 'next', label: 'Next' }] })
+  socket.error('internal')
+  await failed
+  assert.deepEqual(client.environments, [{ key: 'next', label: 'Next' }])
+})
+
+test('an environment edit during hello is published before first sync and empty edits survive reconnect', async (t) => {
+  const { client, Socket, tick } = setup(t, { environments: [{ key: 'old', label: 'Old' }] })
+  client.start()
+  const socket = Socket.instances[0]
+  socket.emit('open')
+  await client.setEnvironments([])
+  socket.reply()
+  await flush()
+  assert.equal(socket.sent.at(-1).type, 'env.set')
+  assert.deepEqual(socket.sent.at(-1).data.environments, [])
+  socket.reply()
+  await flush()
+  assert.equal(socket.sent.at(-1).type, 'sync')
+  socket.reply()
+  await flush()
+  socket.emit('close', { code: 1006 })
+  await tick(1000)
+  const reconnected = Socket.instances.at(-1)
+  reconnected.emit('open')
+  assert.deepEqual(reconnected.sent[0].data.environments, [])
+})

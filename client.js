@@ -11,8 +11,8 @@ window.__ModuleLoader__.load({
     const API = '/api/baton'
     const CSS = `
 .bt-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:5px;background:#dcece3;color:#315c48;font-size:10px;font-weight:700}
-.bt-panel-page{height:100%;min-height:600px;width:100%;min-width:0;flex:1 1 auto;align-self:stretch;display:flex;background:var(--dsw-alias-bg,transparent);overflow:hidden}
-.bt-shell.bt-embedded{width:100%;height:100%;min-height:600px;max-height:none;flex:1 1 auto;align-self:stretch;border:0;border-radius:0;box-shadow:none;animation:none}
+.bt-panel-page{height:100%;min-height:0;width:100%;min-width:0;flex:1 1 auto;align-self:stretch;display:flex;container-type:inline-size;background:var(--dsw-alias-bg,transparent);overflow:hidden}
+.bt-shell.bt-embedded{width:100%;height:100%;min-height:0;max-height:none;flex:1 1 auto;align-self:stretch;border:0;border-radius:0;box-shadow:none;animation:none}
 .bt-nav-icon{position:relative;display:flex;align-items:center;justify-content:center;flex:none}
 .bt-nav-icon .bt-icon{width:100%;height:100%}
 
@@ -49,6 +49,11 @@ window.__ModuleLoader__.load({
 .bt-icon-button:hover{background:var(--bt-soft);color:var(--bt-fg)}
 .bt-body{display:flex;flex:1;min-height:0}
 .bt-sidebar{width:210px;flex:none;border-right:1px solid var(--bt-line);background:var(--bt-soft);display:flex;flex-direction:column;padding:24px 13px 12px}
+.bt-sidebar.collapsed{width:64px;padding:18px 9px 12px;align-items:center}
+.bt-sidebar.collapsed .bt-nav-caption,.bt-sidebar.collapsed .bt-nav,.bt-sidebar.collapsed .bt-sidebar-heading,.bt-sidebar.collapsed .bt-room-list,.bt-sidebar.collapsed .bt-room-actions,.bt-sidebar.collapsed .bt-profile{display:none}
+.bt-nav-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:6px}
+.bt-nav-heading .bt-nav-caption{margin:0}
+.bt-nav-heading .bt-icon{width:15px;height:15px}
 .bt-nav-caption{font-size:10px;letter-spacing:1.6px;color:var(--bt-muted);font-weight:650;padding:0 12px;margin-bottom:12px}
 .bt-nav{display:flex;align-items:center;gap:10px;width:100%;border:0;color:var(--bt-muted);background:transparent;padding:10px 12px;border-radius:8px;text-align:left;min-height:39px}
 .bt-nav.active{background:var(--bt-tint);color:color-mix(in srgb,#537d65 65%,var(--bt-fg));font-weight:650}
@@ -95,7 +100,7 @@ window.__ModuleLoader__.load({
 .bt-search .bt-icon{width:13px;height:13px;color:var(--bt-muted)}
 .bt-search input{min-width:0;width:100%;background:transparent;border:0;outline:0!important;color:var(--bt-fg);font-size:10px}
 .bt-filter{border:0;background:transparent;color:var(--bt-muted);font-size:10px;padding:4px 0;flex:none}
-.bt-task-list{overflow:auto;flex:1;padding:0 8px 10px;scrollbar-width:thin}
+.bt-task-list{overflow-y:auto;overflow-x:hidden;flex:1;min-height:0;overscroll-behavior:contain;padding:0 8px 10px;scrollbar-width:thin}
 .bt-task{position:relative;border:1px solid transparent;border-radius:9px;width:100%;background:transparent;text-align:left;padding:13px 12px;margin-bottom:3px;color:var(--bt-fg)}
 .bt-task:hover{background:var(--bt-soft)}
 .bt-task.selected{background:var(--bt-tint);border-color:color-mix(in srgb,#6d9f7d 20%,var(--bt-bg))}
@@ -108,7 +113,12 @@ window.__ModuleLoader__.load({
 .bt-task{display:block;cursor:pointer;font:inherit}
 .bt-task:focus-visible{outline:3px solid color-mix(in srgb,#72a88b 50%,transparent);outline-offset:-2px}
 .bt-task-badges{display:flex;align-items:center;gap:6px;margin-left:auto}
-.bt-task-link{border:0;background:transparent;color:var(--bt-muted);font-size:10px;padding:2px 0;border-bottom:1px dashed color-mix(in srgb,var(--bt-muted) 45%,transparent)}
+.bt-shell .bt-task-link{border:0;border-radius:4px;background:transparent;color:var(--bt-muted);font-size:10px;font-weight:400;line-height:1.4;padding:3px 5px;white-space:nowrap}
+.bt-task-actions{display:flex;align-items:center;gap:3px;flex:none}
+.bt-task-actions .bt-icon-button{width:24px;height:24px}
+.bt-task-actions .bt-icon{width:13px;height:13px}
+.bt-task-meta{display:flex;align-items:center;justify-content:space-between;gap:4px}
+.bt-delete-note{font-size:10px;color:var(--bt-muted);line-height:1.7}
 .bt-task-link:hover{color:var(--bt-fg)}
 .bt-task-link.deleted{color:color-mix(in srgb,#b65b4c 75%,var(--bt-fg));border-bottom:0}
 .bt-env{display:flex;align-items:center;gap:4px;color:var(--bt-muted);font-size:9px}
@@ -152,6 +162,11 @@ window.__ModuleLoader__.load({
 .bt-field textarea{resize:vertical;min-height:145px;line-height:1.8}
 .bt-field small{font-size:9px;font-weight:400;color:var(--bt-muted)}
 .bt-two-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.bt-env-head,.bt-env-row{display:grid;grid-template-columns:110px 120px minmax(0,1fr) 66px;gap:8px;align-items:center}
+.bt-env-head{font-size:9px;color:var(--bt-muted);letter-spacing:.05em;font-weight:600;padding:0 2px 2px}
+.bt-env-row{margin-bottom:6px}
+.bt-env-row input{background:var(--bt-bg);border:1px solid var(--bt-line);border-radius:7px;min-height:35px;padding:7px 9px;color:var(--bt-fg);width:100%;min-width:0;font-size:12px}
+.bt-env-actions{display:flex;gap:2px;justify-content:flex-end}
 .bt-dialog-footer{display:flex;align-items:center;justify-content:flex-end;gap:9px;padding:15px 24px 20px;border-top:1px solid var(--bt-line)}
 .bt-form-error{background:color-mix(in srgb,#b65b4c 9%,var(--bt-bg));border-radius:7px;padding:10px 12px;font-size:11px;color:var(--bt-fg);line-height:1.8}
 .bt-room-member{display:flex;align-items:center;gap:10px;padding:9px 0}
@@ -166,7 +181,8 @@ window.__ModuleLoader__.load({
 @media(prefers-reduced-motion:reduce){.bt-backdrop,.bt-shell,.bt-spinner{animation:none}.bt-shell button{transition:none}}
 @media(max-width:1050px){.bt-backdrop{padding:22px}.bt-shell{height:calc(100dvh - 44px)}.bt-sidebar{width:176px}.bt-task-column{width:260px}.bt-detail-inner{padding:20px}.bt-detail-footer{padding:16px 20px}.bt-page-head{padding:20px 20px 0}}
 @media(max-width:780px){.bt-backdrop{padding:12px}.bt-shell{height:calc(100dvh - 24px);border-radius:12px}.bt-sidebar{width:150px;padding-left:7px;padding-right:7px}.bt-task-column{width:220px}.bt-page-subtitle{max-width:200px}.bt-detail-title{font-size:20px}.bt-wordmark small{display:none}.bt-page-title{font-size:18px}}
-@media(max-width:650px){.bt-topbar{height:58px;min-height:58px;padding:0 16px}.bt-sidebar{display:none}.bt-page-head{padding:17px 16px 0}.bt-page-subtitle{max-width:none;font-size:10px}.bt-page-title-row{gap:8px}.bt-page-title-row>.bt-button{padding:7px 10px}.bt-task-column{width:100%;border-right:0}.bt-detail{display:none}.bt-inbox.has-selection .bt-task-column{display:none}.bt-inbox.has-selection .bt-detail{display:flex}.bt-mobile-back{display:inline-flex}.bt-detail-inner{padding:16px 22px}.bt-detail-footer{padding:15px 22px}.bt-dialog-cover{padding:14px}.bt-dialog-body{padding:16px 20px}.bt-dialog-header{padding:20px 20px 0}.bt-dialog-footer{padding:15px 20px}.bt-two-fields{grid-template-columns:1fr}.bt-message{margin:10px 16px 0}}
+@media(max-width:650px){.bt-topbar{height:58px;min-height:58px;padding:0 16px}.bt-sidebar{display:none}.bt-page-head{padding:17px 16px 0}.bt-page-subtitle{max-width:none;font-size:10px}.bt-page-title-row{gap:8px}.bt-page-title-row>.bt-button{padding:7px 10px}.bt-task-column{width:100%;border-right:0}.bt-detail{display:none}.bt-inbox.has-selection .bt-task-column{display:none}.bt-inbox.has-selection .bt-detail{display:flex}.bt-mobile-back{display:inline-flex}.bt-detail-inner{padding:16px 22px}.bt-detail-footer{padding:15px 22px}.bt-dialog-cover{padding:14px}.bt-dialog-body{padding:16px 20px}.bt-dialog-header{padding:20px 20px 0}.bt-dialog-footer{padding:15px 20px}.bt-two-fields{grid-template-columns:1fr}.bt-env-head{display:none}.bt-env-row{grid-template-columns:1fr;gap:4px}.bt-env-actions{justify-content:flex-start}.bt-message{margin:10px 16px 0}}
+@container(max-width:440px){.bt-sidebar{display:none}.bt-topbar{height:58px;min-height:58px;padding:0 12px;gap:8px}.bt-top-actions{gap:6px}.bt-connection,.bt-divider,.bt-wordmark small{display:none}.bt-wordmark{font-size:16px}.bt-page-head{padding:17px 14px 0}.bt-page-title-row{gap:8px}.bt-page-title{font-size:17px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bt-page-title-row>.bt-button{padding:7px 10px}.bt-page-subtitle{font-size:10px}.bt-tabs{gap:16px}.bt-tab{font-size:11px;white-space:nowrap}.bt-task-column{width:100%;border-right:0}.bt-detail{display:none}.bt-inbox.has-selection .bt-task-column{display:none}.bt-inbox.has-selection .bt-detail{display:flex}.bt-mobile-back{display:inline-flex}.bt-dialog-cover{padding:10px}.bt-dialog-header{padding:16px 14px 0}.bt-dialog-body{padding:14px}.bt-dialog-footer{padding:12px 14px;gap:6px}.bt-two-fields,.bt-env-row{grid-template-columns:1fr}.bt-env-head{display:none}.bt-env-actions{justify-content:flex-start}}
 `
 
     const paths = {
@@ -185,6 +201,8 @@ window.__ModuleLoader__.load({
       people: ['M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2', 'M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8', 'M22 21v-2a4 4 0 0 0-3-3.87', 'M16 3.13a4 4 0 0 1 0 7.75'],
       refresh: ['M20 7v5h-5', 'M4 17v-5h5', 'M6 7a7 7 0 0 1 11-2l3 3', 'M18 17a7 7 0 0 1-11 2l-3-3'],
       dots: ['M5 12h.01', 'M12 12h.01', 'M19 12h.01'],
+      chevron: ['m14 6-6 6 6 6'],
+      trash: ['M3 6h18', 'M9 6V3h6v3', 'M5 6l1 15h12l1-15', 'M10 10v7', 'M14 10v7'],
     }
     function Icon({ name, spin = false }) {
       return h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.55, strokeLinecap: 'round', strokeLinejoin: 'round', className: 'bt-icon' + (spin ? ' bt-spinner' : ''), 'aria-hidden': true }, (paths[name] ?? paths.inbox).map((d, index) => h('path', { key: index, d })))
@@ -208,6 +226,7 @@ window.__ModuleLoader__.load({
     const countSnapshot = () => attentionCount
 
     let openSession = () => { throw new Error('会话导航服务尚未就绪。') }
+    let pickDirectory = async () => null
 
     async function call(body) {
       let response
@@ -310,6 +329,9 @@ window.__ModuleLoader__.load({
     }
     function Badge({ value }) { return h('span', { className: 'bt-badge ' + value.tone }, value.text) }
     function newDraft(room = '') { return { taskId: crypto.randomUUID(), room, to: '', env: '', title: '', brief: '' } }
+    function visibilityFor(task, userId) {
+      return task.from.userId === userId ? task.fromVisibility ?? 'active' : task.toVisibility ?? 'active'
+    }
 
     function Dialog({ title, description, children, footer, close }) {
       const ref = useRef(null)
@@ -403,6 +425,64 @@ window.__ModuleLoader__.load({
       ])
     }
 
+    function EnvironmentDialog({ initial, close, onSaved }) {
+      const [rows, setRows] = useState(() => (initial ?? []).map(({ key, label, cwd }) => ({ key, label: label ?? key, cwd })))
+      const [error, setError] = useState('')
+      const [busy, setBusy] = useState(false)
+      useEffect(() => {
+        let active = true
+        call({ action: 'environments.list' })
+          .then(result => { if (active && Array.isArray(result.environments)) setRows(result.environments.map(({ key, label, cwd }) => ({ key, label: label ?? key, cwd }))) })
+          .catch(() => {})
+        return () => { active = false }
+      }, [])
+      const change = (index, field, value) => setRows(current => current.map((row, position) => position === index ? { ...row, [field]: value } : row))
+      const browse = async (index) => {
+        try { const path = await pickDirectory(); if (path) change(index, 'cwd', path) } catch (failure) { setError(failure.message) }
+      }
+      const save = async () => {
+        const clean = rows.map(row => ({ key: row.key.trim(), label: row.label.trim() || row.key.trim(), cwd: row.cwd.trim() })).filter(row => row.key || row.label || row.cwd)
+        const keys = new Set()
+        for (const row of clean) {
+          if (!/^[A-Za-z0-9_-]{1,64}$/.test(row.key)) { setError('key 只能包含字母、数字、下划线和连字符，长度 1–64。'); return }
+          if (keys.has(row.key)) { setError('存在重复的环境 key。'); return }
+          keys.add(row.key)
+          if (!row.cwd) { setError('每个环境都需要一个本机绝对目录。'); return }
+        }
+        setBusy(true)
+        setError('')
+        try {
+          const result = await call({ action: 'environments.save', environments: clean })
+          onSaved(result.environments ?? clean, result.published === false ? '已保存在本机，连接恢复后会同步给队友。' : undefined)
+        } catch (failure) {
+          if (failure.data?.saved) onSaved(failure.data.environments ?? clean, '本机配置已保存，但尚未同步给队友。请稍后重新保存或重连。')
+          else setError(failure.message)
+        } finally {
+          setBusy(false)
+        }
+      }
+      const cancel = h(Button, { key: 'cancel', disabled: busy, onClick: close }, '取消')
+      return h(Dialog, {
+        title: '本机执行环境', close: () => { if (!busy) close() },
+        description: '这些环境只在本机生效。队友只会看到 key 和名称，不会看到你的目录。',
+        footer: [cancel, h(Button, { key: 'save', tone: 'primary', busy, disabled: busy, onClick: save }, '保存')],
+      }, [
+        h('div', { key: 'head', className: 'bt-env-head' }, [h('span', { key: 'k' }, 'KEY'), h('span', { key: 'l' }, '名称'), h('span', { key: 'c' }, '本机绝对目录'), h('span', { key: 'a' })]),
+        ...rows.map((row, index) => h('div', { key: index, className: 'bt-env-row' }, [
+          h('input', { key: 'k', 'aria-label': '环境 key ' + (index + 1), value: row.key, maxLength: 64, disabled: busy, placeholder: 'frontend', onChange: event => change(index, 'key', event.target.value) }),
+          h('input', { key: 'l', 'aria-label': '环境名称 ' + (index + 1), value: row.label, maxLength: 40, disabled: busy, placeholder: '前端', onChange: event => change(index, 'label', event.target.value) }),
+          h('input', { key: 'c', 'aria-label': '本机目录 ' + (index + 1), value: row.cwd, disabled: busy, placeholder: '/absolute/path', onChange: event => change(index, 'cwd', event.target.value) }),
+          h('div', { key: 'a', className: 'bt-env-actions' }, [
+            h(IconButton, { key: 'pick', label: '选择目录', icon: 'folder', disabled: busy, onClick: () => browse(index) }),
+            h(IconButton, { key: 'del', label: '删除环境', icon: 'close', disabled: busy, onClick: () => setRows(current => current.filter((_, position) => position !== index)) }),
+          ]),
+        ])),
+        rows.length === 0 ? h('p', { key: 'empty', className: 'bt-hint' }, '还没有环境。添加一个 key 和本机目录，队友才能把任务交到对应目录。') : null,
+        h(Button, { key: 'add', icon: 'plus', disabled: busy || rows.length >= 20, onClick: () => setRows(current => [...current, { key: '', label: '', cwd: '' }]) }, '添加环境'),
+        error ? h('div', { key: 'error', className: 'bt-form-error', role: 'alert' }, error) : null,
+      ])
+    }
+
     function Panel({ embedded = false } = {}) {
       const isOpen = useSyncExternalStore(subscribe, openSnapshot)
       const active = embedded || isOpen
@@ -411,6 +491,7 @@ window.__ModuleLoader__.load({
       const [roomCode, setRoomCode] = useState('')
       const [query, setQuery] = useState('')
       const [onlyAttention, setOnlyAttention] = useState(false)
+      const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
       const [selected, setSelected] = useState(null)
       const [detail, setDetail] = useState(null)
       const [detailBusy, setDetailBusy] = useState(false)
@@ -454,13 +535,14 @@ window.__ModuleLoader__.load({
       const allTasks = data?.tasks ?? []
       const local = data?.local ?? {}
       const room = rooms.find(item => item.code === roomCode)
-      const incoming = allTasks.filter(task => task.to.userId === data?.userId)
-      const outgoing = allTasks.filter(task => task.from.userId === data?.userId)
+      const incoming = allTasks.filter(task => task.to.userId === data?.userId && visibilityFor(task, data?.userId) === 'active')
+      const outgoing = allTasks.filter(task => task.from.userId === data?.userId && visibilityFor(task, data?.userId) === 'active')
+      const archived = allTasks.filter(task => visibilityFor(task, data?.userId) === 'archived')
       const attention = task => task.status === 'pending' || task.status === 'accepted' && ['unsubmitted', 'needs-review'].includes(local[task.taskId]?.phase ?? 'needs-review')
       const unread = incoming.filter(attention).length
       useEffect(() => { setAttentionCount(unread) }, [unread])
-      const rows = (tab === 'incoming' ? incoming : outgoing).filter(task => !roomCode || task.room === roomCode).filter(task => !onlyAttention || (tab === 'incoming' ? attention(task) : task.status === 'pending')).filter(task => [task.title, task.from.displayName, task.to.displayName].some(value => String(value ?? '').toLowerCase().includes(query.toLowerCase()))).sort((a, b) => b.createdAt - a.createdAt)
-      const task = allTasks.find(item => item.taskId === selected)
+      const rows = (tab === 'incoming' ? incoming : tab === 'outgoing' ? outgoing : archived).filter(task => !roomCode || task.room === roomCode).filter(task => !onlyAttention || (tab === 'incoming' ? attention(task) : task.status === 'pending')).filter(task => [task.title, task.from.displayName, task.to.displayName].some(value => String(value ?? '').toLowerCase().includes(query.toLowerCase()))).sort((a, b) => b.createdAt - a.createdAt)
+      const task = rows.find(item => item.taskId === selected)
       const record = local[selected] ?? detail?.local
       const mine = task?.to.userId === data?.userId
       const connectionText = online ? '已连接' : ['connecting', 'authenticating', 'reconnecting'].includes(data?.connection?.state) ? '正在连接' : data ? '未连接' : '连接中'
@@ -543,7 +625,15 @@ window.__ModuleLoader__.load({
       }
       function updateDraft(field, value) {
         if (busyRef.current || uncertain) return
-        setDraft(previous => ({ ...previous, [field]: value, ...(field === 'room' ? { to: '' } : {}), taskId: uncertain ? previous.taskId : crypto.randomUUID() }))
+        setDraft(previous => {
+          const next = { ...previous, [field]: value, taskId: uncertain ? previous.taskId : crypto.randomUUID() }
+          if (field === 'room') { next.to = ''; next.env = '' }
+          if (field === 'to') {
+            const member = rooms.find(room => room.code === previous.room)?.members.find(entry => entry.userId === value)
+            next.env = member?.environments?.length === 1 ? member.environments[0].key : ''
+          }
+          return next
+        })
         if (!uncertain) setDraftError('')
       }
       function separateDraft() {
@@ -555,6 +645,13 @@ window.__ModuleLoader__.load({
       }
       function switchTab(value) { setTab(value); setSelected(null); setDetail(null); setOnlyAttention(false) }
       function confirm(kind, item) { setModal({ kind, task: item }) }
+      async function restoreTask(item) {
+        const result = await run({ action: 'restore', taskId: item.taskId })
+        if (result.ok) {
+          if (selected === item.taskId) { setSelected(null); setDetail(null) }
+          setNotice({ tone: 'success', message: '任务已恢复，关联会话保持原样。' })
+        }
+      }
       async function finishStart(result) {
         const sessionId = result.sessionId ?? result.record?.sessionId
         if (sessionId) await revealSession(sessionId)
@@ -574,8 +671,10 @@ window.__ModuleLoader__.load({
       if (!active) return null
 
       const renderTask = item => {
-        const inbound = tab === 'incoming'
+        const inbound = item.to.userId === data?.userId
         const person = inbound ? item.from : item.to
+        const removed = visibilityFor(item, data?.userId) === 'archived'
+        const peerVisibility = inbound ? item.fromVisibility : item.toVisibility
         const sessionId = local[item.taskId]?.sessionId
         const sessionAction = sessionId
           ? missingSessions[sessionId]
@@ -589,18 +688,29 @@ window.__ModuleLoader__.load({
           onClick: () => selectTask(item.taskId),
           onKeyDown: event => { if (event.target !== event.currentTarget) return; if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectTask(item.taskId) } },
         }, [
-          h('div', { key: 'top', className: 'bt-task-top' }, [h('span', { key: 'p', className: 'bt-person' }, [h(Avatar, { key: 'a', name: person.displayName }), person.displayName]), h('time', { key: 'time', className: 'bt-time', dateTime: new Date(item.createdAt).toISOString() }, relative(item.createdAt))]),
+          h('div', { key: 'top', className: 'bt-task-top' }, [h('span', { key: 'p', className: 'bt-person' }, [h(Avatar, { key: 'a', name: person.displayName }), person.displayName]), h('div', { key: 'actions', className: 'bt-task-actions' }, [
+            h('time', { key: 'time', className: 'bt-time', dateTime: new Date(item.createdAt).toISOString() }, relative(item.createdAt)),
+            removed ? h(IconButton, { key: 'restore', label: '恢复任务', icon: 'refresh', disabled: !!busy || !online, onClick: event => { event.stopPropagation(); restoreTask(item) } }) : null,
+            h(IconButton, { key: 'delete', label: removed ? '永久删除任务' : '删除任务', icon: 'trash', disabled: !!busy || !online, onClick: event => { event.stopPropagation(); confirm(removed ? 'delete' : 'archive', item) } }),
+          ])]),
           h('div', { key: 'title', className: 'bt-task-title' }, item.title),
-          h('div', { key: 'bottom', className: 'bt-task-bottom' }, [h('span', { key: 'env', className: 'bt-env' }, [h(Icon, { key: 'i', name: 'folder' }), item.env]), h('div', { key: 'badges', className: 'bt-task-badges' }, [sessionAction, h(Badge, { key: 'status', value: statusFor(item, local[item.taskId], inbound) })])]),
+          h('div', { key: 'bottom', className: 'bt-task-bottom' }, [h('span', { key: 'env', className: 'bt-env' }, [h(Icon, { key: 'i', name: 'folder' }), item.env]), h('div', { key: 'badges', className: 'bt-task-badges' }, [sessionAction, h(Badge, { key: 'status', value: removed ? { text: '已删除', tone: '' } : statusFor(item, local[item.taskId], inbound) })])]),
+          peerVisibility && peerVisibility !== 'active' ? h('div', { key: 'peer', className: 'bt-delete-note' }, peerVisibility === 'deleted' ? '对方已永久删除' : '对方已移入已删除') : null,
         ])
       }
 
       const renderDetail = () => {
         if (!task) return h(Empty, { title: '选择一条接力任务', description: '查看任务说明与执行目录，确认后再开始。' })
         const person = mine ? task.from : task.to
-        const canAccept = mine && task.status === 'pending'
+        const removed = visibilityFor(task, data?.userId) === 'archived'
+        const canAccept = !removed && mine && task.status === 'pending'
         let footerAction
-        if (canAccept) {
+        if (removed) {
+          footerAction = h('div', { className: 'bt-detail-buttons' }, [
+            h(Button, { key: 'restore', tone: 'primary', disabled: !!busy || !online, onClick: () => restoreTask(task) }, '恢复任务'),
+            h(Button, { key: 'delete', tone: 'danger', disabled: !!busy || !online, onClick: () => confirm('delete', task) }, '永久删除'),
+          ])
+        } else if (canAccept) {
           footerAction = h('div', { key: 'actions', className: 'bt-detail-buttons' }, [
             h(Button, { key: 'reject', disabled: !!busy || !online, onClick: () => confirm('decline', task) }, '拒绝'),
             h(Button, { key: 'accept', tone: 'primary', icon: 'arrow', busy: busy === 'accept', disabled: !!busy || !online || detailBusy || !detail?.cwd || detail?.task?.taskId !== selected, onClick: approve }, busy === 'accept' ? '正在启动…' : '接受并启动'),
@@ -618,6 +728,7 @@ window.__ModuleLoader__.load({
             h('h2', { key: 'title', className: 'bt-detail-title' }, task.title),
             h('div', { key: 'person', className: 'bt-detail-person' }, [h(Avatar, { key: 'a', name: person.displayName }), h('div', { key: 'n', style: { flex: 1 } }, [h('strong', { key: 's' }, person.displayName + (mine ? ' 发来的接力' : ' 将收到这次接力')), h('small', { key: 'd' }, relative(task.createdAt) + ' · ' + task.env)]), h(Badge, { key: 'b', value: statusFor(task, record, mine) })]),
             h('div', { key: 'label', className: 'bt-section-label' }, '任务说明'),
+            removed ? h('div', { key: 'removed', className: 'bt-delete-note' }, '已从你的列表移除。恢复后可以继续处理，关联会话不会删除。') : null,
             detailBusy ? h('div', { key: 'loading', className: 'bt-hint', role: 'status' }, '正在读取任务说明…') : detail?.task?.taskId === selected ? h('div', { key: 'brief', className: 'bt-brief' }, detail.brief) : h('p', { key: 'missing', className: 'bt-hint' }, online ? '暂时无法读取说明，请重新选择这条任务。' : '连接恢复后即可查看任务说明。'),
             mine && detail?.task?.taskId === selected ? h('div', { key: 'directory', className: 'bt-directory' }, [h('div', { key: 'h', className: 'bt-directory-head' }, [h(Icon, { key: 'i', name: 'folder' }), '本机执行目录']), detail.cwd ? h('code', { key: 'path', className: 'bt-path' }, detail.cwd) : h('span', { key: 'err', className: 'bt-hint' }, detail.cwdError ?? '该环境尚未配置，请先完善插件配置。')]) : null,
             record?.phase === 'needs-review' ? h('div', { key: 'warning', className: 'bt-warning' }, [h('strong', { key: 't' }, '上次启动结果需要核对'), h('span', { key: 'd' }, record.sessionId ? '请先在 DSH 中检查该会话是否已有消息。确认前不会再次提交。' : '本机缺少完整启动记录，请在 DSH 会话列表中核对并自行处理。')]) : null,
@@ -639,11 +750,39 @@ window.__ModuleLoader__.load({
       const renderModal = () => {
         if (!modal) return null
         const cancel = h(Button, { key: 'cancel', disabled: !!busy, onClick: modalClose }, '取消')
+        if (modal.kind === 'environments') {
+          return h(EnvironmentDialog, {
+            initial: data?.environments ?? [],
+            close: modalClose,
+            onSaved: async (next, warning) => {
+              setModal(null)
+              setNotice({ tone: warning ? 'error' : 'success', message: warning ?? '本机执行环境已保存并同步给队友。' })
+              await refresh()
+            },
+          })
+        }
+        if (modal.kind === 'archive' || modal.kind === 'delete') {
+          const permanent = modal.kind === 'delete'
+          return h(Dialog, {
+            title: permanent ? '永久删除这条任务？' : '移入已删除？', close: modalClose,
+            description: permanent ? '确认后你将无法恢复或继续处理。只有双方都确认永久删除后才会物理清理任务内容。关联的 DSH 会话始终保留。' : '只从你的列表移除，可在“已删除”中恢复。对方的任务和关联会话都不会删除。',
+            footer: [cancel, h(Button, { key: 'confirm', tone: 'danger', busy: !!busy, disabled: !!busy || !online, onClick: async () => {
+              const result = await run({ action: modal.kind, taskId: modal.task.taskId, confirmed: true })
+              if (!result.ok) return
+              setModal(null)
+              if (selected === modal.task.taskId) { setSelected(null); setDetail(null) }
+              setNotice({ tone: 'success', message: permanent ? result.purged ? '双方均已确认，任务内容已清理。关联会话保留。' : '你已永久删除，等待对方确认后清理任务内容。关联会话保留。' : '已移入“已删除”，可以恢复或再次确认永久删除。' })
+            } }, permanent ? '确认永久删除' : '确认删除')],
+          }, h('p', { className: 'bt-hint' }, modal.task.title))
+        }
         if (modal.kind === 'send') {
           const selectedRoom = rooms.find(item => item.code === draft.room)
           const members = selectedRoom?.members.filter(member => member.userId !== data?.userId) ?? []
+          const recipient = members.find(member => member.userId === draft.to)
+          const recipientEnvironments = recipient?.environments ?? []
+          const envInvalid = recipient !== undefined && recipientEnvironments.length > 0 && !recipientEnvironments.some(env => env.key === draft.env)
           const originalSaved = [...(data?.outbox ?? []), ...allTasks].some(item => item.taskId === draft.taskId)
-          return h(Dialog, { title: '发起一次接力', description: '把任务说明交给一位队友，由对方确认后开始。', close: modalClose, footer: [cancel, h(Button, { key: 'send', tone: 'primary', icon: 'send', busy: busy === 'send', disabled: !!busy || !online || !draft.room || !draft.to || !/^[A-Za-z0-9_-]{1,64}$/.test(draft.env) || !draft.title.trim() || !draft.brief.trim() || new TextEncoder().encode(draft.brief).length > 8192, onClick: submitDraft }, uncertain ? '确认并重试投递' : '发送接力')] }, [
+          return h(Dialog, { title: '发起一次接力', description: '把任务说明交给一位队友，由对方确认后开始。', close: modalClose, footer: [cancel, h(Button, { key: 'send', tone: 'primary', icon: 'send', busy: busy === 'send', disabled: !!busy || !online || !draft.room || !draft.to || !recipient || envInvalid || !/^[A-Za-z0-9_-]{1,64}$/.test(draft.env) || !draft.title.trim() || !draft.brief.trim() || new TextEncoder().encode(draft.brief).length > 8192, onClick: submitDraft }, uncertain ? '确认并重试投递' : '发送接力')] }, [
             draftError ? h('div', { key: 'error', className: 'bt-form-error', role: 'alert' }, draftError) : null,
             uncertain ? h('div', { key: 'separate', className: 'bt-warning' }, [
               h('span', { key: 'hint' }, originalSaved ? '原投递可能已送达。可保留记录并另建独立任务，请避免重复交办同一工作。' : '原投递记录尚未确认，请先重试或刷新，确认保存后即可另建任务。'),
@@ -654,7 +793,7 @@ window.__ModuleLoader__.load({
               h(Field, { key: 'to', label: '交给谁' }, h('select', { value: draft.to, disabled: uncertain || !!busy, onChange: event => updateDraft('to', event.target.value) }, [h('option', { key: 'empty', value: '' }, '选择成员'), ...members.map(member => h('option', { key: member.userId, value: member.userId }, member.displayName + ' · ' + member.userId.slice(0, 8) + (member.online ? '' : ' · 离线')))])),
             ]),
             h(Field, { key: 'title', label: '任务标题' }, h('input', { value: draft.title, maxLength: 120, disabled: uncertain || !!busy, placeholder: '例如：完成登录页的接口联调', onChange: event => updateDraft('title', event.target.value) })),
-            h(Field, { key: 'env', label: '对方的执行环境', hint: '选择本机已配置的 key，或直接填写对方使用的 key；无需知道对方路径。' }, h(EnvPicker, { value: draft.env, options: data?.environments ?? [], disabled: uncertain || !!busy, onChange: value => updateDraft('env', value) })),
+            h(Field, { key: 'env', label: '对方的执行环境', hint: !recipient ? '先选择接收人。' : recipientEnvironments.length ? '对方配置的环境；对方会映射到自己的本机目录。' : '对方还没有上报执行环境，可先手动填写 key，建议让对方在顶栏「本机执行环境」中添加。' }, h(EnvPicker, { value: draft.env, options: recipientEnvironments, disabled: !recipient || uncertain || !!busy, onChange: value => updateDraft('env', value) })),
             h(Field, { key: 'brief', label: '任务说明', hint: '说明目标、完成标准和必要背景。' + new TextEncoder().encode(draft.brief).length + ' / 8192 字节' }, h('textarea', { value: draft.brief, disabled: uncertain || !!busy, placeholder: '请描述任务目标与完成标准…', onChange: event => updateDraft('brief', event.target.value) })),
           ])
         }
@@ -687,10 +826,10 @@ window.__ModuleLoader__.load({
       }
 
       const shell = h('section', { ref, onKeyDown, className: 'bt-shell' + (embedded ? ' bt-embedded' : ''), role: embedded ? undefined : 'dialog', 'aria-modal': embedded ? undefined : true, 'aria-label': 'Baton 接力', style: { position: 'relative' } }, [
-        h('header', { key: 'top', className: 'bt-topbar' }, [h('div', { key: 'brand', className: 'bt-brand' }, [h('span', { key: 'mark', className: 'bt-mark', 'aria-hidden': true }), h('span', { key: 'name', className: 'bt-wordmark' }, ['Baton', h('small', { key: 'cn' }, '接力')])]), h('div', { key: 'actions', className: 'bt-top-actions' }, [h('button', { key: 'rooms', className: 'bt-icon-button bt-mobile-back', type: 'button', 'aria-label': '协作房间', onClick: () => setModal({ kind: 'rooms' }) }, h(Icon, { name: 'people' })), h('span', { key: 'status', className: 'bt-connection', role: 'status' }, [h('span', { key: 'dot', className: 'bt-dot' + (online ? ' online' : '') }), connectionText]), h('span', { key: 'line', className: 'bt-divider' }), h(IconButton, { key: 'refresh', label: '刷新接力', icon: 'refresh', onClick: refresh }), embedded ? null : h(IconButton, { key: 'close', label: '关闭接力', icon: 'close', onClick: () => setOpen(false) })])]),
+        h('header', { key: 'top', className: 'bt-topbar' }, [h('div', { key: 'brand', className: 'bt-brand' }, [h('span', { key: 'mark', className: 'bt-mark', 'aria-hidden': true }), h('span', { key: 'name', className: 'bt-wordmark' }, ['Baton', h('small', { key: 'cn' }, '接力')])]), h('div', { key: 'actions', className: 'bt-top-actions' }, [h('button', { key: 'rooms', className: 'bt-icon-button bt-mobile-back', type: 'button', 'aria-label': '协作房间', onClick: () => setModal({ kind: 'rooms' }) }, h(Icon, { name: 'people' })), h('span', { key: 'status', className: 'bt-connection', role: 'status' }, [h('span', { key: 'dot', className: 'bt-dot' + (online ? ' online' : '') }), connectionText]), h('span', { key: 'line', className: 'bt-divider' }), h(IconButton, { key: 'envs', label: '配置执行环境', icon: 'folder', onClick: () => setModal({ kind: 'environments' }) }), h(IconButton, { key: 'refresh', label: '刷新接力', icon: 'refresh', onClick: refresh }), embedded ? null : h(IconButton, { key: 'close', label: '关闭接力', icon: 'close', onClick: () => setOpen(false) })])]),
         h('div', { key: 'body', className: 'bt-body' }, [
-          h('aside', { key: 'sidebar', className: 'bt-sidebar', 'aria-label': '协作房间' }, [
-            h('div', { key: 'caption', className: 'bt-nav-caption' }, 'WORKSPACE'),
+          h('aside', { key: 'sidebar', className: 'bt-sidebar' + (sidebarCollapsed ? ' collapsed' : ''), 'aria-label': '协作房间' }, [
+            h('div', { key: 'caption', className: 'bt-nav-heading' }, [h('span', { key: 'text', className: 'bt-nav-caption' }, 'WORKSPACE'), h(IconButton, { key: 'toggle', label: sidebarCollapsed ? '展开接力导航' : '收起接力导航', icon: 'chevron', 'aria-expanded': !sidebarCollapsed, style: { transform: sidebarCollapsed ? 'rotate(180deg)' : undefined }, onClick: () => setSidebarCollapsed(value => !value) })]),
             h('button', { key: 'all', type: 'button', className: 'bt-nav' + (!roomCode ? ' active' : ''), onClick: () => { setRoomCode(''); setSelected(null) } }, [h(Icon, { key: 'i', name: 'inbox' }), '全部接力', unread ? h('span', { key: 'count', className: 'bt-count' }, unread) : null]),
             h('div', { key: 'heading', className: 'bt-sidebar-heading' }, [h('span', { key: 't' }, '协作房间'), h('span', { key: 'n' }, String(rooms.length))]),
             h('div', { key: 'rooms', className: 'bt-room-list' }, rooms.length ? rooms.map(item => h('div', { key: item.code, className: 'bt-room-row' + (roomCode === item.code ? ' active' : '') }, [h('button', { key: 'select', type: 'button', className: 'bt-room', onClick: () => { setRoomCode(item.code); setSelected(null) } }, [h('span', { key: 'symbol', className: 'bt-room-symbol' }, '#'), h('div', { key: 'text', style: { minWidth: 0 } }, [h('div', { key: 'name', className: 'bt-room-name' }, item.name), h('div', { key: 'meta', className: 'bt-room-meta' }, item.members.filter(member => member.online).length + ' 人在线 · ' + item.code)])]), h(IconButton, { key: 'more', label: '管理房间 ' + item.name, icon: 'dots', onClick: () => setModal({ kind: 'room', code: item.code }) })])) : h('p', { className: 'bt-hint', style: { padding: '0 12px' } }, '创建或加入房间，开始第一次接力。')),
@@ -698,16 +837,16 @@ window.__ModuleLoader__.load({
             h('div', { key: 'profile', className: 'bt-profile' }, [h(Avatar, { key: 'a', name: data?.displayName }), h('div', { key: 'n', style: { minWidth: 0, flex: 1 } }, [h('div', { key: 'name', className: 'bt-profile-name' }, data?.displayName ?? '正在加载'), h('div', { key: 'id', className: 'bt-profile-id' }, data?.userId?.slice(0, 8) ?? '—')]), h(CopyButton, { key: 'copy', label: '复制我的 userId', value: String(data?.userId ?? ''), disabled: !data?.userId })]),
           ]),
           h('main', { key: 'main', className: 'bt-workspace' }, [
-            h('div', { key: 'head', className: 'bt-page-head' }, [h('div', { key: 'title', className: 'bt-page-title-row' }, [h('h1', { key: 'h', className: 'bt-page-title' }, room?.name ?? '团队收件箱'), h(Button, { key: 'send', tone: 'primary', icon: 'plus', disabled: !online || !rooms.length, onClick: () => { if (!draft.room && roomCode) setDraft(previous => ({ ...previous, room: roomCode })); setModal({ kind: 'send' }) } }, '发起接力')]), h('p', { key: 'subtitle', className: 'bt-page-subtitle' }, '收到的任务，始终由你确认后启动。'), h('nav', { key: 'tabs', className: 'bt-tabs', 'aria-label': '任务方向' }, [h('button', { key: 'in', type: 'button', className: 'bt-tab' + (tab === 'incoming' ? ' active' : ''), onClick: () => switchTab('incoming') }, ['收件箱', h('span', { key: 'count', className: 'bt-count' }, incoming.length)]), h('button', { key: 'out', type: 'button', className: 'bt-tab' + (tab === 'outgoing' ? ' active' : ''), onClick: () => switchTab('outgoing') }, ['已发出的', h('span', { key: 'count', className: 'bt-count' }, outgoing.length + (data?.outbox?.length ?? 0))])])]),
+            h('div', { key: 'head', className: 'bt-page-head' }, [h('div', { key: 'title', className: 'bt-page-title-row' }, [h('h1', { key: 'h', className: 'bt-page-title' }, room?.name ?? '团队收件箱'), h(Button, { key: 'send', tone: 'primary', icon: 'plus', disabled: !online || !rooms.length, onClick: () => { if (!draft.room && roomCode) setDraft(previous => ({ ...previous, room: roomCode })); setModal({ kind: 'send' }) } }, '发起接力')]), h('p', { key: 'subtitle', className: 'bt-page-subtitle' }, '收到的任务，始终由你确认后启动。'), h('nav', { key: 'tabs', className: 'bt-tabs', 'aria-label': '任务方向' }, [h('button', { key: 'in', type: 'button', className: 'bt-tab' + (tab === 'incoming' ? ' active' : ''), onClick: () => switchTab('incoming') }, ['收件箱', h('span', { key: 'count', className: 'bt-count' }, incoming.length)]), h('button', { key: 'out', type: 'button', className: 'bt-tab' + (tab === 'outgoing' ? ' active' : ''), onClick: () => switchTab('outgoing') }, ['已发出的', h('span', { key: 'count', className: 'bt-count' }, outgoing.length + (data?.outbox?.length ?? 0))]), h('button', { key: 'archived', type: 'button', className: 'bt-tab' + (tab === 'archived' ? ' active' : ''), onClick: () => switchTab('archived') }, ['已删除', h('span', { key: 'count', className: 'bt-count' }, archived.length)])])]),
             notice ? h('div', { key: 'notice', className: 'bt-message ' + notice.tone, role: notice.tone === 'error' ? 'alert' : 'status' }, [h(Icon, { key: 'i', name: notice.tone === 'success' ? 'check' : 'warning' }), h('span', { key: 't' }, notice.message), h(IconButton, { key: 'x', label: '关闭提示', icon: 'close', onClick: () => setNotice(null) })]) : null,
             !online && data ? h('div', { key: 'offline', className: 'bt-message' }, [h(Icon, { key: 'i', name: 'warning' }), h('span', { key: 't' }, '暂时无法连接接力服务。已显示的任务会保留，恢复连接后即可操作。')]) : null,
             h('div', { key: 'inbox', className: 'bt-inbox' + (selected ? ' has-selection' : '') }, [
-              h('section', { key: 'list', className: 'bt-task-column', 'aria-label': tab === 'incoming' ? '收到的任务' : '发出的任务' }, [
+              h('section', { key: 'list', className: 'bt-task-column', 'aria-label': tab === 'incoming' ? '收到的任务' : tab === 'outgoing' ? '发出的任务' : '已删除的任务' }, [
                 h('div', { key: 'tools', className: 'bt-list-tools' }, [h('label', { key: 'search', className: 'bt-search' }, [h(Icon, { key: 'i', name: 'search' }), h('input', { key: 'input', value: query, placeholder: '搜索任务或成员', 'aria-label': '搜索任务或成员', onChange: event => setQuery(event.target.value) })]), h('button', { key: 'filter', type: 'button', className: 'bt-filter', 'aria-pressed': onlyAttention, onClick: () => setOnlyAttention(value => !value) }, onlyAttention ? '只看待处理' : '全部状态')]),
                 h('div', { key: 'items', className: 'bt-task-list' }, [
                   ...(tab === 'outgoing' ? data?.outbox ?? [] : []).filter(item => !roomCode || item.room === roomCode).map(item => h('div', { key: item.taskId, className: 'bt-pending-send' }, [h('strong', { key: 't' }, item.title), h('span', { key: 'd' }, '投递结果待确认，原任务内容已保留。'), h(Button, { key: 'retry', disabled: !!busy || !online, busy: busy === 'retry-send', onClick: () => retrySendTask(item) }, '确认投递')])),
                   ...rows.map(renderTask),
-                  !rows.length && !(tab === 'outgoing' && data?.outbox?.length) ? h(Empty, { key: 'empty', title: query ? '没有找到匹配的任务' : tab === 'incoming' ? '收件箱已清空' : '还没有发出的接力', description: query ? '试试其他标题或成员名称。' : tab === 'incoming' ? '队友发来的接力会出现在这里。' : '点击“发起接力”，把任务交给队友。', icon: tab === 'incoming' ? 'inbox' : 'send' }) : null,
+                  !rows.length && !(tab === 'outgoing' && data?.outbox?.length) ? h(Empty, { key: 'empty', title: query ? '没有找到匹配的任务' : tab === 'incoming' ? '收件箱已清空' : tab === 'archived' ? '没有已删除的任务' : '还没有发出的接力', description: query ? '试试其他标题或成员名称。' : tab === 'archived' ? '首次删除的任务可在这里恢复或永久删除。' : tab === 'incoming' ? '队友发来的接力会出现在这里。' : '点击“发起接力”，把任务交给队友。', icon: tab === 'incoming' ? 'inbox' : 'send' }) : null,
                 ]),
               ]),
               h('section', { key: 'detail', className: 'bt-detail', 'aria-label': '任务详情' }, renderDetail()),
@@ -733,6 +872,11 @@ window.__ModuleLoader__.load({
           const uiWorkspace = ctx.get?.('uiWorkspace')
           if (!uiWorkspace?.openSession) throw new Error('会话导航服务尚未就绪。')
           return uiWorkspace.openSession(sessionId)
+        }
+        pickDirectory = () => {
+          const uiWorkspace = ctx.get?.('uiWorkspace')
+          if (!uiWorkspace?.pickDirectory) throw new Error('目录选择器尚未就绪，也可以手动填写绝对路径。')
+          return uiWorkspace.pickDirectory()
         }
         let paneDispose
         const mountPane = () => {

@@ -332,6 +332,60 @@ try {
     return { httpStatus: 409, code: 'cwd-changed', remoteStatus: 'pending', additionalCreates: 0, additionalPrompts: 0 }
   })
 
+  await check('visual directory configuration persists and is advertised without local paths', async () => {
+    const saved = ok(await b.panel({ action: 'environments.save', environments: [
+      { key: 'frontend', label: 'B frontend', cwd: b.alternate },
+      { key: 'backend', label: 'B backend', cwd: b.canonicalCwd },
+    ] }))
+    assert.equal(saved.published, true)
+    const member = await until(async () => {
+      const snapshot = ok(await a.panel({ action: 'snapshot' }))
+      const peer = snapshot.rooms[0].members.find(item => item.userId === b.userId)
+      return peer.environments?.length === 2 ? peer : false
+    }, 'A sees B configured environments')
+    assert.deepEqual(member.environments, [{ key: 'frontend', label: 'B frontend' }, { key: 'backend', label: 'B backend' }])
+    const sent = ok(await a.panel({ action: 'send', room, to: b.userId, env: 'backend', title: 'Configured directory fixture', brief: 'Do not execute this fixture.' }))
+    const detail = ok(await b.panel({ action: 'detail', taskId: sent.task.taskId }))
+    assert.equal(detail.cwd, b.canonicalCwd)
+    b.stop()
+    await b.start()
+    const configuration = ok(await b.panel({ action: 'environments.list' }))
+    assert.equal(configuration.environments[1].cwd, b.canonicalCwd)
+    assert.equal(b.calls.prompts.length, 1)
+    return { metadataOnly: true, restartPersistsConfiguration: true, selectedRecipientDirectory: true }
+  })
+
+  await check('archive and restore are per-user; permanent deletion preserves DSH sessions', async () => {
+    const original = (await b.state()).tasks[acceptedId]
+    const session = b.sessions.get(original.sessionId)
+    ok(await b.panel({ action: 'archive', taskId: acceptedId }))
+    const snapshot = ok(await b.panel({ action: 'snapshot' }))
+    assert.equal(snapshot.tasks.find(item => item.taskId === acceptedId).toVisibility, 'archived')
+    const tools = ok(await b.tool('team_tasks'))
+    assert.ok(!tools.tasks.some(item => item.taskId === acceptedId))
+    assert.equal(ok(await a.panel({ action: 'detail', taskId: acceptedId })).task.status, 'accepted')
+    ok(await b.panel({ action: 'restore', taskId: acceptedId }))
+    assert.equal(ok(await b.panel({ action: 'snapshot' })).tasks.find(item => item.taskId === acceptedId).toVisibility, 'active')
+    ok(await b.panel({ action: 'archive', taskId: acceptedId }))
+    assert.equal((await b.panel({ action: 'delete', taskId: acceptedId })).code, 'invalid_request')
+    assert.equal(ok(await b.panel({ action: 'delete', taskId: acceptedId, confirmed: true })).purged, false)
+    assert.ok(!ok(await b.panel({ action: 'snapshot' })).tasks.some(item => item.taskId === acceptedId))
+    await until(async () => {
+      const task = ok(await a.panel({ action: 'snapshot' })).tasks.find(item => item.taskId === acceptedId)
+      return task?.toVisibility === 'deleted'
+    }, 'sender receives recipient deletion notification')
+    assert.equal(ok(await a.panel({ action: 'detail', taskId: acceptedId })).task.toVisibility, 'deleted')
+    ok(await a.panel({ action: 'disband', code: room }))
+    ok(await a.panel({ action: 'archive', taskId: acceptedId }))
+    assert.equal(ok(await a.panel({ action: 'delete', taskId: acceptedId, confirmed: true })).purged, true)
+    assert.equal((await a.panel({ action: 'detail', taskId: acceptedId })).code, 'not_found')
+    assert.deepEqual((await b.state()).tasks[acceptedId], original)
+    assert.deepEqual(b.sessions.get(original.sessionId), session)
+    assert.equal(b.calls.creates.length, 1)
+    assert.equal(b.calls.prompts.length, 1)
+    return { independentVisibility: true, twoPartyPurge: true, afterDisbandWorks: true, existingSessionPreserved: true }
+  })
+
   console.log(JSON.stringify({ ok: true, passed: cases.length, dshAdapter: 'MOCK', realDshOrModelCalled: false, realComponents: ['Rust server', 'WebSocket', 'Host apply', 'LocalState', 'installation identity'], cleanup: 'temporary process and files removed in finally' }))
 } finally {
   for (const actor of actors) actor.stop()

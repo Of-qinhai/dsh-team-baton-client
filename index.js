@@ -4,7 +4,7 @@
  * the start state machine stays testable without DSH.
  */
 import { randomUUID } from 'node:crypto'
-import { access, mkdir, readFile, realpath, stat, writeFile } from 'node:fs/promises'
+import { access, mkdir, readFile, realpath, rename, stat, unlink, writeFile } from 'node:fs/promises'
 import { constants } from 'node:fs'
 import { homedir, userInfo } from 'node:os'
 import { isAbsolute, join } from 'node:path'
@@ -45,15 +45,23 @@ async function loadIdentity(base) {
   return identity
 }
 
-function normalizeConfig(config) {
-  const environments = Array.isArray(config?.environments) ? config.environments : []
+function normalizeEnvironments(entries) {
+  if (!Array.isArray(entries)) throw new Error('environments must be an array')
+  if (entries.length > 20) throw new Error('at most 20 environments are supported')
   const keys = new Set()
-  for (const entry of environments) {
+  return entries.map((entry) => {
     if (typeof entry?.key !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(entry.key)) throw new Error(`invalid environment key: ${entry?.key}`)
     if (keys.has(entry.key)) throw new Error(`duplicate environment key: ${entry.key}`)
     keys.add(entry.key)
     if (typeof entry.cwd !== 'string' || !isAbsolute(entry.cwd)) throw new Error(`environment ${entry.key} needs an absolute cwd`)
-  }
+    const label = typeof entry.label === 'string' && entry.label.trim() ? entry.label.trim() : entry.key
+    if (Array.from(label).length > 40) throw new Error(`environment ${entry.key} label is too long`)
+    return { key: entry.key, label, cwd: entry.cwd }
+  })
+}
+
+function normalizeConfig(config) {
+  const environments = normalizeEnvironments(Array.isArray(config?.environments) ? config.environments : [])
   const displayName = config?.displayName?.trim() || (userInfo().username || '未命名').slice(0, 40)
   if (Array.from(displayName).length > 40) throw new Error('displayName must be 1–40 characters')
   return {
@@ -65,6 +73,34 @@ function normalizeConfig(config) {
   }
 }
 
+async function loadEnvironments(base, seed) {
+  const path = join(base, 'environments.json')
+  try {
+    const parsed = JSON.parse(await readFile(path, 'utf8'))
+    if (parsed?.version !== 1) throw new Error('unsupported environments file')
+    return normalizeEnvironments(parsed.environments)
+  } catch (error) {
+    if (error?.code === 'ENOENT') return seed
+    throw new Error(`environments file is unreadable: ${error.message}`)
+  }
+}
+
+async function saveEnvironments(base, environments) {
+  await mkdir(base, { recursive: true, mode: 0o700 })
+  const path = join(base, 'environments.json')
+  const temporary = `${path}.${randomUUID()}.tmp`
+  try {
+    await writeFile(temporary, JSON.stringify({ version: 1, environments }, null, 2), { mode: 0o600, flag: 'wx' })
+    await rename(temporary, path)
+  } finally {
+    await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error })
+  }
+}
+
+function advertisedEnvironments(environments) {
+  return environments.map(({ key, label }) => ({ key, label }))
+}
+
 export async function apply(ctx, config) {
   const cfg = normalizeConfig(config)
   const base = process.env.BATON_HOME ?? join(homedir(), '.dsh', 'baton')
@@ -72,11 +108,13 @@ export async function apply(ctx, config) {
   const state = new LocalState(join(base, 'state.json'))
   await state.load()
 
+  let environments = await loadEnvironments(base, cfg.environments)
   let snapshot = { rooms: [], tasks: [] }
   let status = { state: cfg.serverUrl ? 'idle' : 'unconfigured' }
   let connection
   let disposed = false
   let preparingSend = Promise.resolve()
+  let savingEnvironments = Promise.resolve()
   const details = new Map()
 
   const adapter = {
@@ -109,7 +147,7 @@ export async function apply(ctx, config) {
   const normalizeCode = (value) => (typeof value === 'string' ? value.trim().toUpperCase() : '')
 
   function environmentCwd(key) {
-    const entry = cfg.environments.find((item) => item.key === key)
+    const entry = environments.find((item) => item.key === key)
     if (!entry) return undefined
     return entry.cwd
   }
@@ -132,6 +170,10 @@ export async function apply(ctx, config) {
 
   function requireRecipient(task) {
     if (task.to.userId !== identity.userId) throw new BatonStartError('forbidden', '只有收件人可以处理这条任务。')
+  }
+
+  function isActiveTask(task) {
+    return ((task.to.userId === identity.userId ? task.toVisibility : task.fromVisibility) ?? 'active') === 'active'
   }
 
   async function sendTask(input) {
@@ -188,7 +230,7 @@ export async function apply(ctx, config) {
       ok: true, userId: identity.userId, displayName: cfg.displayName, connection: status,
       rooms: snapshot.rooms, tasks: snapshot.tasks, local: localRecords(),
       outbox: Object.values(state.data.sends).filter(item => item.status === 'unconfirmed' && item.expiresAt > Date.now() && !snapshot.tasks.some(task => task.taskId === item.taskId)),
-      environments: cfg.environments.map(({ key, label }) => ({ key, label: label ?? key })),
+      environments,
     }
   }
 
@@ -202,6 +244,7 @@ export async function apply(ctx, config) {
       secret,
       userId: identity.userId,
       displayName: cfg.displayName,
+      environments: advertisedEnvironments(environments),
       onSnapshot: (next) => {
         snapshot = next
         const active = new Set(next.tasks.map(task => task.taskId))
@@ -279,7 +322,7 @@ export async function apply(ctx, config) {
     async execute() {
       try {
         await requireConnection()
-        const tasks = snapshot.tasks.map((task) => ({
+        const tasks = snapshot.tasks.filter(isActiveTask).map((task) => ({
           taskId: task.taskId,
           status: task.status,
           fromUserId: task.from.userId,
@@ -317,11 +360,42 @@ export async function apply(ctx, config) {
         }
         if (action === 'counts') {
           const records = localRecords()
-          const mine = snapshot.tasks.filter(task => task.to.userId === identity.userId)
+          const mine = snapshot.tasks.filter(task => task.to.userId === identity.userId && isActiveTask(task))
           const attention = mine.filter(task => task.status === 'pending' || (task.status === 'accepted' && ['unsubmitted', 'needs-review'].includes(records[task.taskId]?.phase ?? 'needs-review'))).length
           return json({ ok: true, attention, pending: mine.filter(task => task.status === 'pending').length })
         }
+        if (action === 'environments.list') {
+          return json({ ok: true, environments })
+        }
+        if (action === 'environments.save') {
+          const saving = savingEnvironments.then(async () => {
+            try {
+              const next = normalizeEnvironments(body.environments)
+              const canonical = []
+              for (const entry of next) canonical.push({ ...entry, cwd: await canonicalDirectory(entry.cwd) })
+              await saveEnvironments(base, canonical)
+              environments = canonical
+            } catch (error) {
+              return json({ ok: false, error: error.message }, 400)
+            }
+            try {
+              const result = await connection?.setEnvironments(advertisedEnvironments(environments))
+              return json({ ok: true, environments, published: result?.published === true })
+            } catch (error) {
+              return json({ ok: false, code: 'environment-publish-failed', saved: true, environments, error: `环境已保存到本机，但同步失败：${error.message}` }, 502)
+            }
+          })
+          savingEnvironments = saving.catch(() => {})
+          return saving
+        }
         const client = requireConnection()
+        if (['archive', 'restore', 'delete'].includes(action)) {
+          if (action === 'delete' && body.confirmed !== true) throw new BatonStartError('invalid_request', '请确认永久删除这条任务；已有 DSH 会话会保留。')
+          if (!UUID.test(body.taskId)) throw new BatonStartError('invalid_request', '任务标识无效。')
+          const result = await ({ archive: () => client.taskArchive(body.taskId), restore: () => client.taskRestore(body.taskId), delete: () => client.taskDelete(body.taskId) })[action]()
+          await client.sync()
+          return json({ ok: true, ...result })
+        }
         if (action === 'create') return json({ ok: true, ...(await client.roomCreate(body.name)) })
         if (action === 'join') return json({ ok: true, ...(await client.roomJoin(normalizeCode(body.code))) })
         if (action === 'leave') return json({ ok: true, ...(await client.roomLeave(normalizeCode(body.code))) })

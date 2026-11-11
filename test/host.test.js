@@ -18,13 +18,13 @@ async function fixture(run, options = {}) {
   await symlink(project, alias)
   const cwd = await realpath(project)
   const task = { taskId: randomUUID(), room: 'ABCD23', env: 'frontend', title: 'Review task', status: 'pending', from: { userId: randomUUID(), displayName: 'Teammate' }, to: {}, expiresAt: Date.now() + 86_400_000 }
-  const calls = { creates: 0, prompts: 0, responds: 0, sends: [], directories: [] }
+  const calls = { creates: 0, prompts: 0, responds: 0, sends: [], directories: [], mutations: [], syncs: 0, environments: [] }
   const saved = {}
   const disposers = []
   let client
   let route
   const tools = new Map()
-  for (const method of ['start', 'stop', 'sync', 'taskGet', 'taskRespond', 'taskSend']) saved[method] = BatonConnection.prototype[method]
+  for (const method of ['start', 'stop', 'sync', 'taskGet', 'taskRespond', 'taskSend', 'taskArchive', 'taskRestore', 'taskDelete', 'setEnvironments']) saved[method] = BatonConnection.prototype[method]
   BatonConnection.prototype.start = function () {
     client = this
     this.authenticated = true
@@ -34,13 +34,26 @@ async function fixture(run, options = {}) {
     this.onStatus({ state: 'online' })
   }
   BatonConnection.prototype.stop = function () { this.authenticated = false }
-  BatonConnection.prototype.sync = async function () { this.onSnapshot({ rooms: [], tasks: [task] }); return { rooms: [], tasks: [task] } }
+  BatonConnection.prototype.sync = async function () { calls.syncs++; this.onSnapshot({ rooms: [], tasks: task.toVisibility === 'deleted' ? [] : [task] }); return { rooms: [], tasks: [task] } }
   BatonConnection.prototype.taskGet = async function () { return { task: { ...task }, brief: 'Please review this project.' } }
   BatonConnection.prototype.taskRespond = async function (_taskId, decision) { calls.responds++; task.status = decision; return { task: { ...task } } }
   BatonConnection.prototype.taskSend = async function (request) {
     calls.sends.push({ ...request })
     if (options.send) return options.send(request, calls, join(base, 'state.json'))
     return { task: { ...request, status: 'pending' } }
+  }
+  for (const [action, visibility] of [['Archive', 'archived'], ['Restore', 'active'], ['Delete', 'deleted']]) {
+    BatonConnection.prototype[`task${action}`] = async function (taskId) {
+      calls.mutations.push({ action: action.toLowerCase(), taskId })
+      task.toVisibility = visibility
+      return { taskId, purged: false }
+    }
+  }
+  BatonConnection.prototype.setEnvironments = async function (environments) {
+    calls.environments.push(environments)
+    this.environments = environments
+    if (options.publish) return options.publish(environments)
+    return { published: this.authenticated }
   }
   const previousHome = process.env.BATON_HOME
   process.env.BATON_HOME = base
@@ -301,3 +314,70 @@ test('unloading during secret-file initialization prevents a late connection', a
     await rm(directory, { recursive: true, force: true })
   }
 })
+
+test('archive and restore update counts and agent tools without exposing hidden content', () => fixture(async ({ panel, task, tools, calls }) => {
+  assert.equal((await panel({ action: 'counts' })).pending, 1)
+  const archived = await panel({ action: 'archive', taskId: task.taskId })
+  assert.equal(archived.ok, true)
+  assert.equal(archived.taskId, task.taskId)
+  assert.equal(calls.syncs, 1)
+  assert.equal((await panel({ action: 'counts' })).attention, 0)
+  assert.deepEqual(JSON.parse(await tools.get('team_tasks').execute()).tasks, [])
+  assert.equal((await panel({ action: 'snapshot' })).tasks.length, 1)
+  assert.equal((await panel({ action: 'restore', taskId: task.taskId })).ok, true)
+  assert.equal((await panel({ action: 'counts' })).pending, 1)
+  const visible = JSON.parse(await tools.get('team_tasks').execute()).tasks
+  assert.equal(visible.length, 1)
+  assert.deepEqual(Object.keys(visible[0]).sort(), ['direction', 'fromUserId', 'status', 'taskId'])
+}))
+
+test('delete requires confirmation and retains session checkpoints and send journal', () => fixture(async ({ panel, task, calls, base, cwd, start }) => {
+  const record = { taskId: task.taskId, phase: 'submitted', sessionId: 'session-keep', cwd }
+  const send = { taskId: randomUUID(), status: 'unconfirmed', brief: 'Keep the retry identity', expiresAt: Date.now() + 86400000 }
+  await writeFile(join(base, 'state.json'), JSON.stringify({ version: 1, tasks: { [task.taskId]: record }, sends: { [send.taskId]: send } }), { mode: 0o600 })
+  await start()
+  assert.equal((await panel({ action: 'delete', taskId: task.taskId })).code, 'invalid_request')
+  assert.equal(calls.mutations.length, 0)
+  const result = await panel({ action: 'delete', taskId: task.taskId, confirmed: true })
+  assert.equal(result.ok, true)
+  assert.equal(result.purged, false)
+  assert.equal((await panel({ action: 'snapshot' })).tasks.length, 0)
+  const disk = JSON.parse(await readFile(join(base, 'state.json'), 'utf8'))
+  assert.deepEqual(disk.tasks[task.taskId], record)
+  assert.deepEqual(disk.sends[send.taskId], send)
+  assert.equal(calls.creates, 0)
+  assert.equal(calls.prompts, 0)
+}))
+
+test('outgoing visibility controls agent tools and attention only uses incoming visibility', () => fixture(async ({ panel, task, tools, client }) => {
+  task.toVisibility = 'active'
+  task.fromVisibility = 'archived'
+  assert.equal((await panel({ action: 'counts' })).pending, 1)
+  task.from.userId = client.userId
+  task.to.userId = randomUUID()
+  assert.deepEqual(JSON.parse(await tools.get('team_tasks').execute()).tasks, [])
+}))
+
+test('environment saves remain durable offline and serialize concurrent writes with private permissions', () => fixture(async ({ panel, client, project, other, base, start }) => {
+  client.authenticated = false
+  const first = panel({ action: 'environments.save', environments: [{ key: 'first', cwd: project }] })
+  const second = panel({ action: 'environments.save', environments: [{ key: 'last', label: 'Last', cwd: other }] })
+  const results = await Promise.all([first, second])
+  assert.equal(results[0].ok, true)
+  assert.equal(results[1].ok, true)
+  assert.equal(results[1].published, false)
+  assert.deepEqual((await panel({ action: 'environments.list' })).environments, [{ key: 'last', label: 'Last', cwd: await realpath(other) }])
+  assert.equal((await stat(join(base, 'environments.json'))).mode & 0o777, 0o600)
+  await start()
+  assert.equal((await panel({ action: 'environments.list' })).environments[0].key, 'last')
+}))
+
+test('environment publish failures are reported separately after durable local save', () => fixture(async ({ panel, project, base, calls }) => {
+  const result = await panel({ action: 'environments.save', environments: [{ key: 'new', cwd: project }] })
+  assert.equal(result.ok, false)
+  assert.equal(result.status, 502)
+  assert.equal(result.code, 'environment-publish-failed')
+  assert.equal(result.saved, true)
+  assert.equal(JSON.parse(await readFile(join(base, 'environments.json'), 'utf8')).environments[0].key, 'new')
+  assert.deepEqual(calls.environments, [[{ key: 'new', label: 'new' }]])
+}, { publish() { throw new BatonRequestError('internal', 'publish unavailable') } }))
