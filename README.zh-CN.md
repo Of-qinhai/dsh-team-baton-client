@@ -16,29 +16,10 @@ Baton 的 DSH 侧：接收队友的任务、人工确认后在你配置的目录
 
 ## 安装
 
-```sh
-git clone https://github.com/Of-qinhai/dsh-team-baton-client.git
-cd dsh-team-baton-client
-cp cordis.patch.example.yml cordis.patch.yml
-```
+插件包自带一个**安全的占位** `cordis.patch.yml`（`serverUrl` 为空），所以可以先安装、
+再通过 DSH profile 配置，不会因为缺少 patch 文件安装失败。
 
-编辑 `cordis.patch.yml`：
-
-```yaml
-- insert:
-    - id: baton
-      name: '@token-team/dsh-baton'
-      config:
-        serverUrl: wss://baton.example.com/ws
-        # secretFile: /绝对路径/secret   # 默认 ~/.config/baton/secret
-        displayName: 你的名字
-        environments:
-          - { key: frontend, label: 前端, cwd: /绝对路径/前端 }
-          - { key: backend,  label: 后端, cwd: /绝对路径/后端 }
-```
-
-把团队密钥放到 `~/.config/baton/secret`（目录 0700、文件 0600），或设置环境变量
-`BATON_SECRET`：
+### 1. 放团队密钥
 
 ```sh
 mkdir -p ~/.config/baton
@@ -47,16 +28,50 @@ chmod 700 ~/.config/baton
 chmod 600 ~/.config/baton/secret
 ```
 
-在**本仓库根目录**安装（不是服务端仓库）：
+`secretFile` 默认读这个路径；环境变量 `BATON_SECRET` 非空时优先。
 
-```text
+### 2. 安装插件
+
+在插件管理器的 Git 仓库输入框粘贴仓库地址（就是截图里显示「Git 仓库」的弹窗），
+或 clone 后安装本地目录：
+
+```sh
+git clone https://github.com/Of-qinhai/dsh-team-baton-client.git
+# 然后在 DSH 里：
 plugin_manager install_bundle target=/绝对路径/dsh-team-baton-client
 ```
 
-安装需要批准；完成后重启 DSH 并刷新页面。
+安装需要批准。
 
-`cordis.patch.yml` 被 Git 忽略，永远不要提交服务地址、密钥或本机路径。
+### 3. 在 profile patch 里配置
+
+打开 profile 的 `cordis.patch.yml`：
+
+- macOS/Linux：`~/.dsh/profiles/<profile>/cordis.patch.yml`
+- Windows：`%USERPROFILE%\.dsh\profiles\<profile>\cordis.patch.yml`
+
+加一条**完整覆盖行**（同 id 会替换整个 config，所以 `serverUrl` 必须一起写）：
+
+```yaml
+- id: baton
+  name: '@token-team/dsh-baton'
+  config:
+    serverUrl: wss://baton.example.com/ws
+    # secretFile: /绝对路径/secret   # 默认 ~/.config/baton/secret
+    displayName: 你的名字
+    environments:
+      - { key: frontend, label: 前端, cwd: /绝对路径/前端 }
+      - { key: backend,  label: 后端, cwd: /绝对路径/后端 }
+```
+
+不要修改 `node_modules` 下的那份 patch，它会在重装时被替换。
+
+### 4. 重启并刷新
+
+重启 DSH，再刷新页面。侧边栏入口在「自动化任务」下面。
+
 非 localhost 的 `serverUrl` 必须用 `wss://`；`secretFile` 必须是绝对路径且权限 0600。
+永远不要提交服务地址、密钥或本机路径。
 
 ## 面板
 

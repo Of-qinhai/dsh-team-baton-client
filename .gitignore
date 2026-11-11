@@ -1,5 +1,4 @@
 node_modules/
-cordis.patch.yml
 cordis.patch.local.yml
 .baton-secret
 dist/

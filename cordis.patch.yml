@@ -1,0 +1,8 @@
+# Safe placeholder shipped with the plugin. It connects to no server.
+# After installing, add a complete override row with the same id to your
+# profile's cordis.patch.yml (serverUrl, displayName, environments).
+- insert:
+    - id: baton
+      name: '@token-team/dsh-baton'
+      config:
+        serverUrl: ''

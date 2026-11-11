@@ -19,29 +19,11 @@ yourself, or get your team's endpoint and shared secret from its administrator.
 
 ## Install
 
-```sh
-git clone https://github.com/Of-qinhai/dsh-team-baton-client.git
-cd dsh-team-baton-client
-cp cordis.patch.example.yml cordis.patch.yml
-```
+The package ships a **safe placeholder** `cordis.patch.yml` (empty `serverUrl`),
+so the bundle can be installed before it is configured. Configure it through your
+DSH profile after installation.
 
-Edit `cordis.patch.yml`:
-
-```yaml
-- insert:
-    - id: baton
-      name: '@token-team/dsh-baton'
-      config:
-        serverUrl: wss://baton.example.com/ws
-        # secretFile: /absolute/path/to/secret   # defaults to ~/.config/baton/secret
-        displayName: Your name
-        environments:
-          - { key: frontend, label: Frontend, cwd: /absolute/path/to/web }
-          - { key: backend,  label: Backend,  cwd: /absolute/path/to/api }
-```
-
-Put the team secret at `~/.config/baton/secret` (directory 0700, file 0600), or
-set `BATON_SECRET` in the environment:
+### 1. Put the team secret in place
 
 ```sh
 mkdir -p ~/.config/baton
@@ -50,17 +32,52 @@ chmod 700 ~/.config/baton
 chmod 600 ~/.config/baton/secret
 ```
 
-Install from this repository root (not the server repository):
+`secretFile` defaults to this path; `BATON_SECRET` in the environment takes
+precedence when non-empty.
 
-```text
+### 2. Install the plugin
+
+Paste the repository URL into the plugin manager's Git repository field (the
+dialog that shows **Git 仓库**), or clone and install the local directory:
+
+```sh
+git clone https://github.com/Of-qinhai/dsh-team-baton-client.git
+# then, in DSH:
 plugin_manager install_bundle target=/absolute/path/to/dsh-team-baton-client
 ```
 
-The install requires approval. Restart DSH and refresh the page afterwards.
+The install requires approval.
 
-`cordis.patch.yml` is Git-ignored; never commit your endpoint, secret, or local
-paths. A non-localhost `serverUrl` must use `wss://`; `secretFile` must be
-absolute and mode 0600.
+### 3. Configure in the profile patch
+
+Open the profile's `cordis.patch.yml`:
+
+- macOS/Linux: `~/.dsh/profiles/<profile>/cordis.patch.yml`
+- Windows: `%USERPROFILE%\.dsh\profiles\<profile>\cordis.patch.yml`
+
+Add a **complete override row** (the same id replaces the whole config, so keep
+`serverUrl`):
+
+```yaml
+- id: baton
+  name: '@token-team/dsh-baton'
+  config:
+    serverUrl: wss://baton.example.com/ws
+    # secretFile: /absolute/path/to/secret   # defaults to ~/.config/baton/secret
+    displayName: Your name
+    environments:
+      - { key: frontend, label: Frontend, cwd: /absolute/path/to/web }
+      - { key: backend,  label: Backend,  cwd: /absolute/path/to/api }
+```
+
+Do not edit the copy under `node_modules`; it is replaced on reinstall.
+
+### 4. Restart and refresh
+
+Restart DSH, then refresh the page. The sidebar entry sits below Automation Tasks.
+
+A non-localhost `serverUrl` must use `wss://`; `secretFile` must be absolute and
+mode 0600. Never commit your endpoint, secret, or local paths.
 
 ## Panel
 
