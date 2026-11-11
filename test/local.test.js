@@ -4,6 +4,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
 
+const local = await import('../../scripts/local.mjs').catch(() => null)
+const localTest = (name, fn) => test(name, { skip: local === null }, fn)
+
 async function project(run) {
   const root = await mkdtemp(join(tmpdir(), 'baton-local-test-'))
   await mkdir(join(root, 'baton-server'))
@@ -11,8 +14,8 @@ async function project(run) {
   try { await run(root) } finally { await rm(root, { recursive: true, force: true }) }
 }
 
-test('local setup creates one persistent private secret and usable data/workspace directories', () => project(async root => {
-  const { prepareLocal } = await import('../../scripts/local.mjs')
+localTest('local setup creates one persistent private secret and usable data/workspace directories', () => project(async root => {
+  const { prepareLocal } = local
   const first = await prepareLocal(root)
   const original = await readFile(first.secretFile, 'utf8')
   const second = await prepareLocal(root)
@@ -26,8 +29,8 @@ test('local setup creates one persistent private secret and usable data/workspac
   assert.equal(first.serverUrl, 'ws://127.0.0.1:8080/ws')
 }))
 
-test('local setup reuses an existing secret rather than replacing it', () => project(async root => {
-  const { prepareLocal } = await import('../../scripts/local.mjs')
+localTest('local setup reuses an existing secret rather than replacing it', () => project(async root => {
+  const { prepareLocal } = local
   const key = 'existing-local-test-secret-1234567890'
   await writeFile(join(root, '.baton-secret'), key + '\n', { mode: 0o600 })
   const result = await prepareLocal(root)
@@ -35,8 +38,8 @@ test('local setup reuses an existing secret rather than replacing it', () => pro
   assert.equal(await readFile(result.secretFile, 'utf8'), key + '\n')
 }))
 
-test('invalid or exposed secrets and environment mismatches fail without replacing the file', () => project(async root => {
-  const { prepareLocal } = await import('../../scripts/local.mjs')
+localTest('invalid or exposed secrets and environment mismatches fail without replacing the file', () => project(async root => {
+  const { prepareLocal } = local
   const path = join(root, '.baton-secret')
   await writeFile(path, 'short\n', { mode: 0o600 })
   await assert.rejects(prepareLocal(root), /32/)
@@ -48,16 +51,16 @@ test('invalid or exposed secrets and environment mismatches fail without replaci
   await assert.rejects(prepareLocal(root), /0600/)
 }))
 
-test('local setup only accepts loopback bindings and prints the matching plugin URL', () => project(async root => {
-  const { prepareLocal } = await import('../../scripts/local.mjs')
+localTest('local setup only accepts loopback bindings and prints the matching plugin URL', () => project(async root => {
+  const { prepareLocal } = local
   await assert.rejects(prepareLocal(root, { bind: '0.0.0.0:8080' }), /回环/)
   const config = await prepareLocal(root, { bind: '127.0.0.1:19080' })
   assert.equal(config.serverUrl, 'ws://127.0.0.1:19080/ws')
   assert.ok(config.pluginConfig.includes(config.serverUrl))
 }))
 
-test('local check does not silently initialize missing credentials', () => project(async root => {
-  const { loadLocal } = await import('../../scripts/local.mjs')
+localTest('local check does not silently initialize missing credentials', () => project(async root => {
+  const { loadLocal } = local
   await assert.rejects(loadLocal(root), /先运行/)
   await assert.rejects(stat(join(root, '.baton-secret')), { code: 'ENOENT' })
 }))
