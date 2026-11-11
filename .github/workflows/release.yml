@@ -1,0 +1,31 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: Use the latest npm CLI (Trusted Publishing support)
+        run: npm install -g npm@latest
+      - run: npm ci
+      - run: npm test
+      - name: Verify tag matches package version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          node -e "const expected=process.env.TAG.replace(/^v/,''); const actual=require('./package.json').version; if(actual!==expected){console.error('tag '+process.env.TAG+' does not match package version '+actual);process.exit(1)}"
+      - name: Publish via npm Trusted Publishing
+        run: npm publish --access public --provenance
