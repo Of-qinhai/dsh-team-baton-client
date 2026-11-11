@@ -54,7 +54,7 @@ plugin_manager install_bundle target=/绝对路径/dsh-team-baton-client
 
 ```yaml
 - id: baton
-  name: '@token-team/dsh-baton'
+  name: '@ohmynpm/dsh-baton'
   config:
     serverUrl: wss://baton.example.com/ws
     # secretFile: /绝对路径/secret   # 默认 ~/.config/baton/secret

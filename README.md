@@ -60,7 +60,7 @@ Add a **complete override row** (the same id replaces the whole config, so keep
 
 ```yaml
 - id: baton
-  name: '@token-team/dsh-baton'
+  name: '@ohmynpm/dsh-baton'
   config:
     serverUrl: wss://baton.example.com/ws
     # secretFile: /absolute/path/to/secret   # defaults to ~/.config/baton/secret

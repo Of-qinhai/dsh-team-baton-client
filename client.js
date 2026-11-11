@@ -3,7 +3,7 @@
  * CSS is scoped and installed with the plugin lifetime so the bundle needs no build.
  */
 window.__ModuleLoader__.load({
-  id: '@token-team/dsh-baton',
+  id: '@ohmynpm/dsh-baton',
   factory(require) {
     const React = require('react')
     const h = React.createElement

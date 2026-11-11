@@ -2,7 +2,7 @@
 # cordis.patch.yml is local-only and ignored by Git; never put a secret in YAML.
 - insert:
     - id: baton
-      name: '@token-team/dsh-baton'
+      name: '@ohmynpm/dsh-baton'
       config:
         serverUrl: ''
         secretEnv: BATON_SECRET

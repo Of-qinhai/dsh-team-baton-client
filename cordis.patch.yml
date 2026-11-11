@@ -3,6 +3,6 @@
 # profile's cordis.patch.yml (serverUrl, displayName, environments).
 - insert:
     - id: baton
-      name: '@token-team/dsh-baton'
+      name: '@ohmynpm/dsh-baton'
       config:
         serverUrl: ''
