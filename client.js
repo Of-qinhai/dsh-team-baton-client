@@ -41,6 +41,8 @@ window.__ModuleLoader__.load({
 .bt-wordmark{font-size:18px;letter-spacing:-.7px;font-weight:750}
 .bt-wordmark small{font-size:11px;font-weight:500;letter-spacing:1.4px;margin-left:10px;color:var(--bt-muted)}
 .bt-top-actions{display:flex;align-items:center;gap:15px}
+.bt-shell.bt-embedded .bt-topbar{-webkit-app-region:drag;user-select:none}
+.bt-shell.bt-embedded .bt-topbar button,.bt-shell.bt-embedded .bt-topbar a,.bt-shell.bt-embedded .bt-topbar input,.bt-shell.bt-embedded .bt-topbar select,.bt-shell.bt-embedded .bt-topbar label{-webkit-app-region:no-drag}
 .bt-connection{font-size:11px;color:var(--bt-muted);display:flex;align-items:center;gap:6px}
 .bt-dot{width:6px;height:6px;border-radius:50%;background:#a9ada9;flex:none}
 .bt-dot.online{background:#639878;box-shadow:0 0 0 3px color-mix(in srgb,#83b393 13%,transparent)}
