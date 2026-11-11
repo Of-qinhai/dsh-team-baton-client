@@ -108,6 +108,17 @@ plugin_manager install_bundle target=/绝对路径/dsh-team-baton-client
 只注册三个工具：`team_rooms`、`team_task_send`、`team_tasks`。
 审批入口不暴露给 Agent，远端标题、brief 和显示名不会进入当前 Agent 上下文。
 
+## 更新
+
+每次发布都会递增版本号。**只有从 npm registry 安装**时，插件管理器才能检查更新：
+
+- **npm 安装**：插件管理器可以比较本地版本和 registry 版本并提示更新。
+- **Git 地址或本地目录安装**：没有默认 registry 来源，所以会显示“无法检查更新”；
+  需要重新安装最新提交或 Release 包。
+
+当前包仍是 `private: true`，没有发布到 npm，所以 Git/本地安装不能自动检查。
+启用自动检查需要把 `private` 改为 `false`、选择可访问的包名/registry，并在每次发布递增版本号。
+
 ## 开发
 
 ```sh

@@ -1,1 +1,1 @@
-{ "meta": { "title": "Baton relay (M0)", "description": "Minimal probe that verifies Session creation, naming, and first-message admission in DSH." } }
+{"meta": {"title": "Baton relay", "description": "Receive a teammate's relay task in DSH, then start a Session in a local directory after explicit approval."}}

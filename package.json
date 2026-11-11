@@ -1,6 +1,6 @@
 {
   "name": "@token-team/dsh-baton",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -51,5 +51,13 @@
     }
   },
   "license": "MIT",
-  "author": "Baton contributors"
+  "author": "Baton contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Of-qinhai/dsh-team-baton-client.git"
+  },
+  "homepage": "https://github.com/Of-qinhai/dsh-team-baton-client#readme",
+  "bugs": {
+    "url": "https://github.com/Of-qinhai/dsh-team-baton-client/issues"
+  }
 }

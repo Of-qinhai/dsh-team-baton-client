@@ -124,6 +124,22 @@ Only three tools are registered: `team_rooms`, `team_task_send`, and `team_tasks
 Approval is not exposed to the agent, and remote titles, briefs, and display names
 never enter the current Agent context.
 
+## Updates
+
+The package version is bumped for every release. Automatic update checks only
+work when the plugin is installed from an npm registry package:
+
+- **npm install**: the plugin manager can compare the installed version with the
+  registry and offer an update.
+- **Git URL or local directory**: there is no default registry source, so the
+  plugin manager shows "unable to check for updates"; reinstall the latest
+  commit or release tarball instead.
+
+This package is currently `private: true`, so it is not published to npm and a
+Git/local install cannot auto-check. Publishing requires setting `private` to
+`false`, choosing a reachable package name/registry, and bumping the version for
+each release.
+
 ## Development
 
 ```sh

@@ -1,1 +1,1 @@
-{ "meta": { "title": "Baton 接力（M0）", "description": "验证 DSH 会话创建、命名与首条消息提交的最小探针。" } }
+{"meta": {"title": "Baton 接力", "description": "在 DSH 里接收队友的接力任务，人工确认后在本机目录启动会话。"}}
