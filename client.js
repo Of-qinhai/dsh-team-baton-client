@@ -15,7 +15,7 @@ window.__ModuleLoader__.load({
 .bt-shell.bt-embedded{width:100%;height:100%;min-height:600px;max-height:none;flex:1 1 auto;align-self:stretch;border:0;border-radius:0;box-shadow:none;animation:none}
 .bt-nav-icon{position:relative;display:flex;align-items:center;justify-content:center;flex:none}
 .bt-nav-icon .bt-icon{width:100%;height:100%}
-.bt-nav-badge{position:absolute;top:-4px;right:-5px;min-width:13px;height:13px;padding:0 3px;border-radius:7px;background:#315f4d;color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1}
+
 .bt-icon-button.copied,.bt-button.copied{color:#315c48;background:var(--bt-tint)}
 .bt-combo{position:relative}
 .bt-combo-menu{position:absolute;z-index:8;left:0;right:0;top:calc(100% + 4px);max-height:190px;overflow:auto;padding:4px;border:1px solid var(--bt-line);border-radius:8px;background:var(--bt-bg);box-shadow:0 12px 30px rgb(12 30 21 / 14%)}
@@ -341,10 +341,7 @@ window.__ModuleLoader__.load({
         className: 'bt-nav-icon', style: { width: size, height: size },
         title: attention > 0 ? attention + ' 条待处理' : '接力',
         'aria-hidden': true,
-      }, [
-        h(Icon, { key: 'i', name: 'inbox' }),
-        attention > 0 ? h('span', { key: 'b', className: 'bt-nav-badge' }, attention > 9 ? '9+' : attention) : null,
-      ])
+      }, h(Icon, { name: 'inbox' }))
     }
 
     class PanelBoundary extends React.Component {
@@ -737,7 +734,17 @@ window.__ModuleLoader__.load({
           if (!uiWorkspace?.openSession) throw new Error('会话导航服务尚未就绪。')
           return uiWorkspace.openSession(sessionId)
         }
-        ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({ name: 'sidebar.panellist', id: 'baton', order: 15, label: '接力' }, SidebarBatonIcon))
+        let paneDispose
+        const mountPane = () => {
+          paneDispose?.()
+          paneDispose = ctx.slots.register({
+            name: 'sidebar.panellist', id: 'baton', order: 15,
+            label: () => attentionCount > 0 ? `接力 ${attentionCount}` : '接力',
+          }, SidebarBatonIcon)
+        }
+        ctx.slots.inject('sidebar.panellist', () => { mountPane() })
+        const unsubscribeCount = subscribeCount(() => { if (paneDispose) mountPane() })
+        ctx.effect(() => () => { unsubscribeCount(); paneDispose?.() }, 'baton: sidebar panel label')
         ctx.slots.inject('main', () => ctx.slots.register({ name: 'main', key: 'baton' }, MainPanel))
       },
     }
