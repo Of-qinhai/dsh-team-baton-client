@@ -11,6 +11,7 @@ window.__ModuleLoader__.load({
     const API = '/api/baton'
     const CSS = `
 .bt-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:5px;background:#dcece3;color:#315c48;font-size:10px;font-weight:700}
+html[data-baton-attention] button[aria-label="接力"]>span+span::after{content:var(--baton-attention);display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;margin-left:7px;border-radius:5px;background:#dcece3;color:#315c48;font-size:10px;font-weight:700;line-height:1}
 .bt-panel-page{height:100%;min-height:0;width:100%;min-width:0;flex:1 1 auto;align-self:stretch;display:flex;container-type:inline-size;background:var(--dsw-alias-bg,transparent);overflow:hidden}
 .bt-shell.bt-embedded{width:100%;height:100%;min-height:0;max-height:none;flex:1 1 auto;align-self:stretch;border:0;border-radius:0;box-shadow:none;animation:none}
 .bt-nav-icon{position:relative;display:flex;align-items:center;justify-content:center;flex:none}
@@ -222,6 +223,15 @@ window.__ModuleLoader__.load({
       const next = Math.max(0, Number(value) || 0)
       if (next === attentionCount) return
       attentionCount = next
+      if (typeof document !== 'undefined') {
+        if (next > 0) {
+          document.documentElement.dataset.batonAttention = ''
+          document.documentElement.style.setProperty('--baton-attention', next > 9 ? '9+' : String(next))
+        } else {
+          delete document.documentElement.dataset.batonAttention
+          document.documentElement.style.removeProperty('--baton-attention')
+        }
+      }
       for (const listener of countListeners) listener()
     }
     const subscribeCount = listener => { countListeners.add(listener); return () => countListeners.delete(listener) }
@@ -880,20 +890,11 @@ window.__ModuleLoader__.load({
           if (!uiWorkspace?.pickDirectory) throw new Error('目录选择器尚未就绪，也可以手动填写绝对路径。')
           return uiWorkspace.pickDirectory()
         }
-        let paneDispose
-        const mountPane = () => {
-          paneDispose?.()
-          paneDispose = ctx.slots.register({
-            name: 'sidebar.panellist', id: 'baton', order: 15,
-            label: () => attentionCount > 0 ? `接力 ${attentionCount}` : '接力',
-          }, SidebarBatonIcon)
-        }
-        ctx.slots.inject('sidebar.panellist', () => {
-          mountPane()
-          return () => { paneDispose?.(); paneDispose = undefined }
-        })
-        const unsubscribeCount = subscribeCount(() => { if (paneDispose) mountPane() })
-        ctx.effect(() => () => { unsubscribeCount(); paneDispose?.() }, 'baton: sidebar panel label')
+        ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({ name: 'sidebar.panellist', id: 'baton', order: 15, label: '接力' }, SidebarBatonIcon))
+        ctx.effect(() => () => {
+          delete document.documentElement.dataset.batonAttention
+          document.documentElement.style.removeProperty('--baton-attention')
+        }, 'baton: sidebar badge')
         ctx.slots.inject('main', () => ctx.slots.register({ name: 'main', key: 'baton' }, MainPanel))
       },
     }
