@@ -43,7 +43,13 @@ async function check(name, run, viewport = { width: 1280, height: 800 }) {
     const reply = data => route.fulfill({ json: data })
     if (body.action === 'snapshot') return reply({ ...state, tasks: state.tasks.filter(item => visibility(item) !== 'deleted') })
     if (body.action === 'counts') return reply({ ok: true, attention: 0 })
-    if (body.action === 'detail') return reply({ ok: true, task, brief: 'Isolated task brief', cwd: '/example/workspace/web', local: state.local[body.taskId] })
+    if (body.action === 'detail') return reply({ ok: true, task, brief: 'Isolated task brief', executionBrief: state.local[body.taskId]?.executionBrief ?? 'Isolated task brief', cwd: '/example/workspace/web', local: state.local[body.taskId] })
+    if (body.action === 'accept') {
+      task.status = 'accepted'
+      const record = { taskId: task.taskId, phase: 'submitted', sessionId: 'edited-session', executionBrief: body.brief }
+      state.local[task.taskId] = record
+      return reply({ ok: true, record, sessionId: record.sessionId })
+    }
     if (body.action === 'environments.list') return reply({ ok: true, environments: state.environments })
     if (body.action === 'environments.save') {
       state.environments = body.environments
@@ -72,6 +78,40 @@ async function check(name, run, viewport = { width: 1280, height: 800 }) {
 }
 
 try {
+  await check('recipient edits survive task switching; validation and original comparison precede acceptance', async ({ page, state, calls }) => {
+    const first = page.locator('.bt-task').filter({ hasText: '登录页接口联调' })
+    await first.click()
+    const editor = page.getByRole('textbox', { name: '启动任务说明', exact: true })
+    await expect(editor).toHaveValue('Isolated task brief')
+    await editor.fill('Recipient corrected goal\nOnly inspect the login flow.')
+    await page.locator('.bt-task').filter({ hasText: '确认新版工作台' }).click()
+    await expect(editor).toHaveValue('Isolated task brief')
+    await first.click()
+    await expect(editor).toHaveValue('Recipient corrected goal\nOnly inspect the login flow.')
+    await page.getByRole('button', { name: '刷新接力', exact: true }).click()
+    await expect(editor).toHaveValue('Recipient corrected goal\nOnly inspect the login flow.')
+    await page.getByText('查看发送方原文', { exact: true }).click()
+    await expect(page.locator('.bt-original-brief')).toContainText('Isolated task brief')
+    await page.getByRole('button', { name: '恢复原文', exact: true }).click()
+    await expect(editor).toHaveValue('Isolated task brief')
+    await editor.fill('  \n ')
+    await expect(page.getByRole('button', { name: '接受并启动', exact: true })).toBeDisabled()
+    await editor.fill('汉'.repeat(2731))
+    await expect(page.getByRole('button', { name: '接受并启动', exact: true })).toBeDisabled()
+    await editor.fill('Final approved recipient text')
+    await page.getByRole('button', { name: /^已发出的/ }).click()
+    await page.locator('.bt-task').filter({ hasText: '完善自动化部署' }).click()
+    await expect(editor).toHaveCount(0)
+    await page.getByRole('button', { name: /^收件箱/ }).click()
+    await first.click()
+    await expect(editor).toHaveValue('Final approved recipient text')
+    await page.getByRole('button', { name: '接受并启动', exact: true }).click()
+    await expect(editor).toHaveCount(0)
+    assert.equal(calls.filter(body => body.action === 'accept').length, 1)
+    assert.equal(calls.find(body => body.action === 'accept').brief, 'Final approved recipient text')
+    assert.equal(Object.values(state.local).find(record => record.sessionId === 'edited-session').executionBrief, 'Final approved recipient text')
+  })
+
   await check('quiet session link and collapsible navigation', async ({ page }) => {
     const link = page.locator('.bt-task-link').first()
     assert.ok(await link.evaluate(node => parseFloat(getComputedStyle(node).fontSize)) <= 11)

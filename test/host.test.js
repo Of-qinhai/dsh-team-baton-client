@@ -18,7 +18,7 @@ async function fixture(run, options = {}) {
   await symlink(project, alias)
   const cwd = await realpath(project)
   const task = { taskId: randomUUID(), room: 'ABCD23', env: 'frontend', title: 'Review task', status: 'pending', from: { userId: randomUUID(), displayName: 'Teammate' }, to: {}, expiresAt: Date.now() + 86_400_000 }
-  const calls = { creates: 0, prompts: 0, responds: 0, sends: [], directories: [], mutations: [], syncs: 0, environments: [] }
+  const calls = { creates: 0, prompts: 0, promptTexts: [], responds: 0, sends: [], directories: [], mutations: [], syncs: 0, environments: [] }
   const saved = {}
   const disposers = []
   let client
@@ -71,7 +71,7 @@ async function fixture(run, options = {}) {
     sessionController: {
       async create() { calls.creates++; return { sessionId: 'session-test' } },
       async rename() { if (options.rename) return options.rename() },
-      async prompt() { calls.prompts++; return { accepted: true } },
+      async prompt(request) { calls.prompts++; calls.promptTexts.push(request.content[0].text); return { accepted: true } },
     },
   }
   const config = { serverUrl: 'ws://127.0.0.1:8080/ws', secretEnv: 'BATON_HOST_TEST_SECRET', displayName: 'Test', environments: [{ key: 'frontend', cwd: alias }] }
@@ -93,6 +93,43 @@ async function fixture(run, options = {}) {
     await rm(directory, { recursive: true, force: true })
   }
 }
+
+test('accept submits the recipient-edited brief and keeps the sender original', () => fixture(async ({ task, panel, calls, cwd, base }) => {
+  const revised = 'Corrected goal: review only the login flow.'
+  const result = await panel({ action: 'accept', taskId: task.taskId, cwd, brief: revised })
+  assert.equal(result.ok, true)
+  assert.deepEqual(calls.promptTexts, [revised])
+  const disk = JSON.parse(await readFile(join(base, 'state.json'), 'utf8'))
+  assert.equal(disk.tasks[task.taskId].executionBrief, revised)
+  const detail = await panel({ action: 'detail', taskId: task.taskId })
+  assert.equal(detail.brief, 'Please review this project.')
+  assert.equal(detail.executionBrief, revised)
+}))
+
+test('invalid edited briefs cannot approve or create a session', () => fixture(async ({ task, panel, calls, cwd }) => {
+  for (const brief of ['', ' \n\t ', null, {}, '汉'.repeat(2731)]) {
+    const result = await panel({ action: 'accept', taskId: task.taskId, cwd, brief })
+    assert.equal(result.code, 'invalid_request')
+    assert.equal(calls.responds, 0)
+    assert.equal(calls.creates, 0)
+    assert.equal(calls.prompts, 0)
+  }
+}))
+
+test('resume after restart uses the confirmed edit, not the remote brief', () => {
+  let failRename = true
+  return fixture(async ({ task, panel, calls, cwd, start }) => {
+    const brief = 'Recipient-confirmed version retained across restart.'
+    assert.equal((await panel({ action: 'accept', taskId: task.taskId, cwd, brief })).code, 'rename-failed')
+    await start()
+    const detail = await panel({ action: 'detail', taskId: task.taskId })
+    assert.equal(detail.executionBrief, brief)
+    assert.equal((await panel({ action: 'resume', taskId: task.taskId, cwd })).ok, true)
+    assert.deepEqual(calls.promptTexts, [brief])
+    assert.equal(calls.creates, 1)
+    assert.equal(calls.responds, 1)
+  }, { rename() { if (failRename) { failRename = false; throw new Error('temporary rename failure') } } })
+})
 
 test('a changed symlink needs renewed approval before any server approval or session', () => fixture(async ({ alias, other, cwd, task, panel, calls }) => {
   const detail = await panel({ action: 'detail', taskId: task.taskId })

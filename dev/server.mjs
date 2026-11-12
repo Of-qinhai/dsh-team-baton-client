@@ -106,11 +106,11 @@ const server = createServer(async (request, response) => {
       if (purged) state.tasks = state.tasks.filter(task => task.taskId !== current.taskId)
       return send(response, { ok: true, taskId: current.taskId, purged })
     }
-    if (body.action === 'detail') return send(response, { ok: true, task: current, brief, cwd: current?.env === 'backend' ? '/example/workspace/api' : directory, local: state.local[body.taskId] })
+    if (body.action === 'detail') return send(response, { ok: true, task: current, brief, executionBrief: state.local[body.taskId]?.executionBrief ?? brief, cwd: current?.env === 'backend' ? '/example/workspace/api' : directory, local: state.local[body.taskId] })
     if (body.action === 'accept' || body.action === 'resume') {
       if (controls.changeNextCwd) { controls.changeNextCwd = false; directory = '/example/workspace/new-web'; return send(response, { ok: false, code: 'cwd-changed', error: '执行目录已变化，请重新查看并确认目录后再接受。' }, 409) }
       current.status = 'accepted'
-      const record = { taskId: body.taskId, phase: 'submitted', sessionId: 'session-preview-' + randomUUID(), cwd: body.cwd }
+      const record = { taskId: body.taskId, phase: 'submitted', sessionId: 'session-preview-' + randomUUID(), cwd: body.cwd, executionBrief: state.local[body.taskId]?.executionBrief ?? body.brief ?? brief }
       state.local[body.taskId] = record
       return send(response, { ok: true, record })
     }

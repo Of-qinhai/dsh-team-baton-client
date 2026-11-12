@@ -22,6 +22,29 @@ async function setup(adapterOverrides = {}) {
   return { dir, state, statePath, adapter, calls }
 }
 
+test('confirmed execution brief is checkpointed before server approval and reused on resume', async () => {
+  const prompts = []
+  const { dir, state, adapter, calls } = await setup({
+    async rename() { calls.rename++; if (calls.rename === 1) throw new Error('rename unavailable') },
+    async prompt({ text }) { prompts.push(text) },
+  })
+  try {
+    const starter = createStarter({ adapter, state })
+    const input = { taskId: 'edited', room: 'ABC123', title: 'Review', brief: 'Confirmed recipient edit', cwd: '/tmp', respond: async () => {
+      const disk = JSON.parse(await readFile(state.path, 'utf8'))
+      assert.equal(disk.tasks.edited.executionBrief, 'Confirmed recipient edit')
+    } }
+    await assert.rejects(starter.start(input), error => error.code === 'rename-failed')
+    await assert.rejects(starter.start({ ...input, brief: 'A later different version' }), error => error.code === 'brief-changed')
+    const saved = new LocalState(state.path)
+    await saved.load()
+    const resumed = await createStarter({ adapter, state: saved }).resume({ taskId: 'edited', brief: 'Remote original must not replace the edit', verify: async () => {} })
+    assert.equal(resumed.phase, PHASE.submitted)
+    assert.equal(calls.create, 1)
+    assert.deepEqual(prompts, ['Confirmed recipient edit'])
+  } finally { await rm(dir, { recursive: true, force: true }) }
+})
+
 test('happy path records every phase and submits once', async () => {
   const { dir, state, adapter, calls } = await setup()
   try {

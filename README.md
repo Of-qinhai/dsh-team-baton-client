@@ -117,6 +117,14 @@ main area: rooms on the left, tasks in the middle, task detail on the right. Onl
 **Accept and start** creates a Session and submits the brief. Declining only
 updates state. A `needs review` task can only be dismissed manually.
 
+Recipients can edit the execution brief before accepting a pending task, compare
+the sender's original, or restore it. The editor retains separate drafts while
+switching tasks within the current panel; drafts do not survive a page reload.
+Acceptance checkpoints the confirmed text locally before approving or starting.
+Retries and resume after restart reuse that text. The sender's original remains
+unchanged, and confirmed text is read-only. Empty edits or edits over 8192 UTF-8
+bytes are rejected before approval.
+
 The sender chooses an environment key; this install maps it to its own absolute
 `cwd`. Remote paths are never sent and there is no fallback directory.
 

@@ -140,6 +140,11 @@ html[data-baton-attention] button[aria-label="接力"]>span+span::after{content:
 .bt-detail-person small{display:block;color:var(--bt-muted);font-size:9px;margin-top:2px}
 .bt-section-label{font-size:10px;font-weight:650;color:var(--bt-muted);letter-spacing:.3px;margin:23px 0 10px}
 .bt-brief{font-size:12px;line-height:1.95;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--bt-fg)}
+.bt-shell .bt-brief-editor{display:block;width:100%;min-height:210px;resize:vertical;padding:12px 13px;border:1px solid var(--bt-line);border-radius:8px;background:var(--bt-bg);color:var(--bt-fg);font-size:12px;line-height:1.85;font-weight:400}
+.bt-brief-tools{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:7px;font-size:10px;color:var(--bt-muted)}
+.bt-original-brief{margin-top:13px;color:var(--bt-muted);font-size:11px}
+.bt-original-brief summary{cursor:pointer;margin-bottom:7px}
+.bt-original-brief .bt-brief{color:var(--bt-muted);font-size:11px}
 .bt-directory{background:var(--bt-soft);border:1px solid var(--bt-line);border-radius:9px;padding:12px 13px;margin:24px 0 0}
 .bt-directory-head{display:flex;align-items:center;gap:6px;color:var(--bt-muted);font-size:10px;margin-bottom:7px}
 .bt-path{font:10px/1.7 'SFMono-Regular',Consolas,monospace;overflow-wrap:anywhere;display:block}
@@ -515,6 +520,7 @@ html[data-baton-attention] button[aria-label="接力"]>span+span::after{content:
       const [draftError, setDraftError] = useState('')
       const [uncertain, setUncertain] = useState(false)
       const [missingSessions, setMissingSessions] = useState({})
+      const [briefEdits, setBriefEdits] = useState({})
       const ref = useRef(null)
       const busyRef = useRef(false)
       const refreshSequence = useRef(0)
@@ -557,6 +563,9 @@ html[data-baton-attention] button[aria-label="接力"]>span+span::after{content:
       const task = rows.find(item => item.taskId === selected)
       const record = local[selected] ?? detail?.local
       const mine = task?.to.userId === data?.userId
+      const executionBrief = record?.executionBrief ?? briefEdits[selected] ?? detail?.executionBrief ?? detail?.brief ?? ''
+      const executionBriefBytes = new TextEncoder().encode(executionBrief).length
+      const executionBriefInvalid = !executionBrief.trim() || executionBriefBytes > 8192
       const connectionText = online ? '已连接' : ['connecting', 'authenticating', 'reconnecting'].includes(data?.connection?.state) ? '正在连接' : data ? '未连接' : '连接中'
       const modalClose = () => { if (!busyRef.current) { setModal(null); setRoomInput('') } }
 
@@ -670,7 +679,7 @@ html[data-baton-attention] button[aria-label="接力"]>span+span::after{content:
         else setNotice({ tone: 'success', message: '任务已接手，消息已提交到新的 DSH 会话。' })
       }
       async function approve() {
-        const result = await run({ action: 'accept', taskId: task.taskId, cwd: detail.cwd })
+        const result = await run({ action: 'accept', taskId: task.taskId, cwd: detail.cwd, brief: executionBrief })
         if (result.ok) await finishStart(result)
       }
       async function retrySendTask(item) {
@@ -716,6 +725,8 @@ html[data-baton-attention] button[aria-label="接力"]>span+span::after{content:
         const person = mine ? task.from : task.to
         const removed = visibilityFor(task, data?.userId) === 'archived'
         const canAccept = !removed && mine && task.status === 'pending'
+        const editable = canAccept && record?.executionBrief === undefined
+        const revised = mine && executionBrief !== detail?.brief
         let footerAction
         if (removed) {
           footerAction = h('div', { className: 'bt-detail-buttons' }, [
@@ -725,7 +736,7 @@ html[data-baton-attention] button[aria-label="接力"]>span+span::after{content:
         } else if (canAccept) {
           footerAction = h('div', { key: 'actions', className: 'bt-detail-buttons' }, [
             h(Button, { key: 'reject', disabled: !!busy || !online, onClick: () => confirm('decline', task) }, '拒绝'),
-            h(Button, { key: 'accept', tone: 'primary', icon: 'arrow', busy: busy === 'accept', disabled: !!busy || !online || detailBusy || !detail?.cwd || detail?.task?.taskId !== selected, onClick: approve }, busy === 'accept' ? '正在启动…' : '接受并启动'),
+            h(Button, { key: 'accept', tone: 'primary', icon: 'arrow', busy: busy === 'accept', disabled: !!busy || !online || detailBusy || !detail?.cwd || detail?.task?.taskId !== selected || executionBriefInvalid, onClick: approve }, busy === 'accept' ? '正在启动…' : '接受并启动'),
           ])
         } else if (mine && record?.phase === 'unsubmitted' && task.status === 'accepted') {
           footerAction = h(Button, { key: 'resume', tone: 'primary full', icon: 'arrow', busy: busy === 'resume', disabled: !!busy || !online || !detail?.cwd || detailBusy || detail?.task?.taskId !== selected, onClick: async () => { const result = await run({ action: 'resume', taskId: task.taskId, cwd: detail.cwd }); if (result.ok) await finishStart(result) } }, '继续启动')
@@ -741,7 +752,12 @@ html[data-baton-attention] button[aria-label="接力"]>span+span::after{content:
             h('div', { key: 'person', className: 'bt-detail-person' }, [h(Avatar, { key: 'a', name: person.displayName }), h('div', { key: 'n', style: { flex: 1 } }, [h('strong', { key: 's' }, person.displayName + (mine ? ' 发来的接力' : ' 将收到这次接力')), h('small', { key: 'd' }, relative(task.createdAt) + ' · ' + task.env)]), h(Badge, { key: 'b', value: statusFor(task, record, mine) })]),
             h('div', { key: 'label', className: 'bt-section-label' }, '任务说明'),
             removed ? h('div', { key: 'removed', className: 'bt-delete-note' }, '已从你的列表移除。恢复后可以继续处理，关联会话不会删除。') : null,
-            detailBusy ? h('div', { key: 'loading', className: 'bt-hint', role: 'status' }, '正在读取任务说明…') : detail?.task?.taskId === selected ? h('div', { key: 'brief', className: 'bt-brief' }, detail.brief) : h('p', { key: 'missing', className: 'bt-hint' }, online ? '暂时无法读取说明，请重新选择这条任务。' : '连接恢复后即可查看任务说明。'),
+            detailBusy ? h('div', { key: 'loading', className: 'bt-hint', role: 'status' }, '正在读取任务说明…') : detail?.task?.taskId === selected ? editable ? h('div', { key: 'editor' }, [
+              h('textarea', { key: 'input', className: 'bt-brief-editor', 'aria-label': '启动任务说明', 'aria-describedby': 'bt-brief-edit-hint', value: executionBrief, disabled: !!busy, onChange: event => { if (!busyRef.current) setBriefEdits(previous => ({ ...previous, [selected]: event.target.value })) } }),
+              h('div', { key: 'tools', className: 'bt-brief-tools' }, [h('span', { key: 'count', role: executionBriefBytes > 8192 ? 'alert' : undefined }, executionBriefBytes + ' / 8192 字节'), h(Button, { key: 'reset', tone: 'ghost', disabled: !!busy || !revised, onClick: () => setBriefEdits(previous => ({ ...previous, [selected]: detail.brief })) }, '恢复原文')]),
+              h('p', { key: 'hint', id: 'bt-brief-edit-hint', className: 'bt-hint' }, '可以先修正目标与完成标准。接受时将使用当前内容启动，不会改写发送方原文。'),
+            ]) : h('div', { key: 'brief', className: 'bt-brief' }, mine ? executionBrief : detail.brief) : h('p', { key: 'missing', className: 'bt-hint' }, online ? '暂时无法读取说明，请重新选择这条任务。' : '连接恢复后即可查看任务说明。'),
+            detail?.task?.taskId === selected && revised ? h('details', { key: 'original', className: 'bt-original-brief' }, [h('summary', { key: 'title' }, '查看发送方原文'), h('div', { key: 'text', className: 'bt-brief' }, detail.brief)]) : null,
             mine && detail?.task?.taskId === selected ? h('div', { key: 'directory', className: 'bt-directory' }, [h('div', { key: 'h', className: 'bt-directory-head' }, [h(Icon, { key: 'i', name: 'folder' }), '本机执行目录']), detail.cwd ? h('code', { key: 'path', className: 'bt-path' }, detail.cwd) : h('span', { key: 'err', className: 'bt-hint' }, detail.cwdError ?? '该环境尚未配置，请先完善插件配置。')]) : null,
             record?.phase === 'needs-review' ? h('div', { key: 'warning', className: 'bt-warning' }, [h('strong', { key: 't' }, '上次启动结果需要核对'), h('span', { key: 'd' }, record.sessionId ? '请先在 DSH 中检查该会话是否已有消息。确认前不会再次提交。' : '本机缺少完整启动记录，请在 DSH 会话列表中核对并自行处理。')]) : null,
             record?.phase === 'unsubmitted' && task.status === 'accepted' ? h('div', { key: 'retry', className: 'bt-warning' }, [h('strong', { key: 't' }, '已接手，尚未提交消息'), h('span', { key: 'd' }, record.sessionId ? '会话已保留。继续启动会复用同一会话与执行目录。' : '上次启动未完成，确认目录后可以继续。')]) : null,

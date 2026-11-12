@@ -172,16 +172,22 @@ export function createStarter({ adapter, state, isDefinitelyNotEnqueued = () => 
         if ([PHASE.needsReview, PHASE.creating, PHASE.submitting].includes(existing?.phase)) {
           throw new BatonStartError('needs-review', '上次启动结果不明，请先在 DSH 中核对。', existing)
         }
+        if (existing?.executionBrief !== undefined && existing.executionBrief !== brief) {
+          throw new BatonStartError('brief-changed', '任务说明已确认，请使用已保存的版本继续启动。', existing)
+        }
 
         let record = existing ?? await saveRecord({
           taskId,
           room,
           title,
           cwd,
+          executionBrief: brief,
           phase: PHASE.unsubmitted,
           sessionId: undefined,
           startedAt: Date.now(),
         })
+        // Legacy checkpoints have no execution text; pin it before any approval.
+        if (record.executionBrief === undefined) record = await saveRecord({ ...record, executionBrief: brief })
 
         if (record.cwd !== cwd) {
           if (record.sessionId) throw new BatonStartError('cwd-changed', '已有会话必须沿用原执行目录。', record)
@@ -190,21 +196,22 @@ export function createStarter({ adapter, state, isDefinitelyNotEnqueued = () => 
 
         await respond()
         const prepared = await prepareSession(record, { title: `[${room}] ${title}` })
-        return submit(prepared.record, prepared.sessionId, brief)
+        return submit(prepared.record, prepared.sessionId, record.executionBrief)
       })
     },
 
     /** Continue an accepted task whose local phase is still `unsubmitted`. */
     async resume({ taskId, brief, verify }) {
       return locked(taskId, async () => {
-        const existing = state.get(taskId)
+        let existing = state.get(taskId)
         if (!existing) throw new BatonStartError('missing-record', '没有找到本地启动记录，请先在 DSH 中核对。', undefined)
         if (existing.phase !== PHASE.unsubmitted) {
           throw new BatonStartError('not-resumable', '这条任务当前不能继续启动，请先查看并核对状态。', existing)
         }
         await verify(existing)
+        if (existing.executionBrief === undefined) existing = await saveRecord({ ...existing, executionBrief: brief })
         const prepared = await prepareSession(existing, { title: `[${existing.room}] ${existing.title}` })
-        return submit(prepared.record, prepared.sessionId, brief)
+        return submit(prepared.record, prepared.sessionId, existing.executionBrief)
       })
     },
 

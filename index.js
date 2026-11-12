@@ -446,7 +446,7 @@ export async function apply(ctx, config) {
               }
             }
           }
-          return json({ ok: true, task: result.task, brief: result.brief, local: record, cwd, cwdError })
+          return json({ ok: true, task: result.task, brief: result.brief, executionBrief: result.task.to.userId === identity.userId ? record?.executionBrief ?? result.brief : result.brief, local: record, cwd, cwdError })
         }
         if (action === 'decline') {
           const result = await client.taskRespond(body.taskId, 'declined')
@@ -458,13 +458,17 @@ export async function apply(ctx, config) {
           requireRecipient(task)
           if (task.status === 'declined') throw new BatonStartError('conflict', '这条任务已经拒绝。')
           if (task.status === 'accepted' && !state.get(task.taskId)) throw new BatonStartError('needs-review', '任务已接受但缺少本地记录，请先核对。')
+          const executionBrief = body.brief === undefined ? result.brief : body.brief
+          if (typeof executionBrief !== 'string' || !executionBrief.trim() || Buffer.byteLength(executionBrief, 'utf8') > 8192) {
+            throw new BatonStartError('invalid_request', '启动任务说明不能为空，且不能超过 8192 UTF-8 字节。')
+          }
           const cwd = await canonicalDirectory(environmentCwd(task.env))
           if (body.cwd !== cwd) throw new BatonStartError('cwd-changed', '执行目录已变化，请重新查看并确认目录后再接受。')
           const record = await starter.start({
             taskId: task.taskId,
             room: task.room,
             title: task.title,
-            brief: result.brief,
+            brief: executionBrief,
             cwd,
             respond: () => client.taskRespond(task.taskId, 'accepted'),
           })
@@ -505,7 +509,7 @@ export async function apply(ctx, config) {
       } catch (error) {
         const code = error.code ?? 'internal'
         const statusCode = ['connection-closed', 'unconfigured'].includes(code) ? 503
-          : ['cwd-changed', 'conflict', 'needs-review', 'start-in-progress', 'already-submitted', 'not-resumable', 'not-reviewable'].includes(code) ? 409
+          : ['cwd-changed', 'brief-changed', 'conflict', 'needs-review', 'start-in-progress', 'already-submitted', 'not-resumable', 'not-reviewable'].includes(code) ? 409
             : code === 'not_found' ? 404 : code === 'forbidden' ? 403 : ['invalid_request', 'invalid-cwd'].includes(code) ? 400 : 500
         return json({ ok: false, code, error: error.message, ...(error.taskId ? { taskId: error.taskId } : {}) }, statusCode)
       }

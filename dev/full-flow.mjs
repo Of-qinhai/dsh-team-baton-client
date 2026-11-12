@@ -255,7 +255,8 @@ try {
   await check('B accepts once even with concurrent accept; A sees accepted receipt', async () => {
     const detail = ok(await b.panel({ action: 'detail', taskId: acceptedId }))
     const gate = b.holdNextCreate()
-    const pending = b.panel({ action: 'accept', taskId: acceptedId, cwd: detail.cwd })
+    const editedBrief = 'Recipient correction: inspect the fixture only; do not modify project files.'
+    const pending = b.panel({ action: 'accept', taskId: acceptedId, cwd: detail.cwd, brief: editedBrief })
     try {
       await until(() => gate.entered, 'first acceptance reaches mock session creation')
       const duplicate = await b.panel({ action: 'accept', taskId: acceptedId, cwd: detail.cwd })
@@ -269,12 +270,14 @@ try {
     assert.equal(b.calls.workspaces[0].cwd, b.canonicalCwd)
     assert.deepEqual(b.calls.workspaces[0].sessionIds, [accepted.sessionId])
     assert.equal(b.calls.renames[0].title, '[' + room + '] Accept fixture')
-    assert.equal(b.calls.prompts[0].content[0].text, detail.brief)
+    assert.equal(b.calls.prompts[0].content[0].text, editedBrief)
+    assert.equal(ok(await a.panel({ action: 'detail', taskId: acceptedId })).brief, detail.brief)
     const saved = (await b.state()).tasks[acceptedId]
     assert.equal(saved.phase, PHASE.submitted)
     assert.equal(saved.sessionId, accepted.sessionId)
     assert.equal(saved.cwd, b.canonicalCwd)
-    return { creates: 1, prompts: 1, concurrentDuplicateStatus: 409, senderReceipt: 'accepted', checkpoint: saved.phase }
+    assert.equal(saved.executionBrief, editedBrief)
+    return { creates: 1, prompts: 1, concurrentDuplicateStatus: 409, senderReceipt: 'accepted', checkpoint: saved.phase, recipientEditSubmitted: true, senderOriginalPreserved: true }
   })
 
   await check('B sends to A; decline creates no session and B sees declined receipt', async () => {
