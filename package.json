@@ -1,6 +1,6 @@
 {
   "name": "@ohmynpm/dsh-baton",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "private": false,
   "type": "module",
   "scripts": {
@@ -36,7 +36,8 @@
     "README.md",
     "README.zh-CN.md",
     "LICENSE",
-    "setup.sh"
+    "setup.sh",
+    "setup.mjs"
   ],
   "dsh": {
     "bundle": {
@@ -65,6 +66,6 @@
     "access": "public"
   },
   "bin": {
-    "baton-setup": "./setup.sh"
+    "baton-setup": "./setup.mjs"
   }
 }
