@@ -79,6 +79,24 @@ Restart DSH, then refresh the page. The sidebar entry sits below Automation Task
 A non-localhost `serverUrl` must use `wss://`; `secretFile` must be absolute and
 mode 0600. Never commit your endpoint, secret, or local paths.
 
+## Quick setup
+
+After installing (or before installing, `npx` can fetch the package), run the
+interactive setup:
+
+```sh
+npx --package @ohmynpm/dsh-baton baton-setup
+```
+
+It prompts for the display name, the server URL (optional; empty keeps the
+current profile config), and the team secret (hidden input). It writes:
+
+- `~/.dsh/baton/settings.json` (0600) with `displayName` and `serverUrl`;
+- `~/.config/baton/secret` (0600) with the team secret.
+
+`settings.json` overrides the same values from the profile patch; environments
+are still configured in the panel. Restart DSH or reload the plugin afterwards.
+
 ## Environments
 
 Each install configures its own directories visually: the folder button in the

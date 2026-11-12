@@ -73,6 +73,23 @@ plugin_manager install_bundle target=/绝对路径/dsh-team-baton-client
 非 localhost 的 `serverUrl` 必须用 `wss://`；`secretFile` 必须是绝对路径且权限 0600。
 永远不要提交服务地址、密钥或本机路径。
 
+## 交互式配置
+
+安装后（未安装也可以，`npx` 会拉取公开包）运行：
+
+```sh
+npx --package @ohmynpm/dsh-baton baton-setup
+```
+
+会依次询问显示名称、服务地址（可留空，留空保留 profile 现有配置）和团队密钥
+（输入不回显）。写入：
+
+- `~/.dsh/baton/settings.json`（0600）：`displayName` 和 `serverUrl`；
+- `~/.config/baton/secret`（0600）：团队密钥。
+
+`settings.json` 会覆盖 profile patch 里的同名字段；执行环境仍在面板里配置。
+完成后重启 DSH 或重新加载插件。
+
 ## 执行环境
 
 每个安装自己可视化配置目录：点面板顶部的文件夹按钮打开「本机执行环境」，

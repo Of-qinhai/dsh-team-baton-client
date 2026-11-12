@@ -85,6 +85,21 @@ async function loadEnvironments(base, seed) {
   }
 }
 
+async function loadSettings(base) {
+  const path = join(base, 'settings.json')
+  try {
+    const parsed = JSON.parse(await readFile(path, 'utf8'))
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) throw new Error('invalid settings file')
+    return {
+      ...(typeof parsed.displayName === 'string' && parsed.displayName.trim() ? { displayName: parsed.displayName.trim() } : {}),
+      ...(typeof parsed.serverUrl === 'string' && parsed.serverUrl.trim() ? { serverUrl: parsed.serverUrl.trim() } : {}),
+    }
+  } catch (error) {
+    if (error?.code === 'ENOENT') return {}
+    throw new Error(`settings file is unreadable: ${error.message}`)
+  }
+}
+
 async function saveEnvironments(base, environments) {
   await mkdir(base, { recursive: true, mode: 0o700 })
   const path = join(base, 'environments.json')
@@ -102,8 +117,9 @@ function advertisedEnvironments(environments) {
 }
 
 export async function apply(ctx, config) {
-  const cfg = normalizeConfig(config)
   const base = process.env.BATON_HOME ?? join(homedir(), '.dsh', 'baton')
+  const settings = await loadSettings(base)
+  const cfg = normalizeConfig({ ...config, ...settings })
   const identity = await loadIdentity(base)
   const state = new LocalState(join(base, 'state.json'))
   await state.load()
