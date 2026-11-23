@@ -291,7 +291,7 @@ export async function apply(ctx, config) {
   ctx.effect(() => ctx.tools.register({
     name: 'team_rooms',
     description: 'List Baton rooms this install belongs to. Returns room codes, owner ids, member ids, and online flags; names stay in the panel.',
-    parameters: {},
+    parameters: { type: 'object', properties: {} },
     output: { schema: { type: 'string' }, render: (_args, value) => text(value) },
     async execute() {
       try {
@@ -312,12 +312,16 @@ export async function apply(ctx, config) {
     name: 'team_task_send',
     description: 'Send one Baton task to one member of a room. Use a userId from team_rooms; the panel selects people by name. Returns only taskId and status.',
     parameters: {
-      taskId: { type: 'string', description: 'For retrying an uncertain send, reuse the taskId returned with the error; omit for a new task.' },
-      room: { type: 'string', required: true, description: 'Room code.' },
-      to: { type: 'string', required: true, description: 'Recipient userId.' },
-      env: { type: 'string', required: true, description: 'Environment key as configured by the recipient.' },
-      title: { type: 'string', required: true, description: 'Short task title, at most 120 characters.' },
-      brief: { type: 'string', required: true, description: 'Task brief, at most 8 KiB UTF-8.' },
+      type: 'object',
+      properties: {
+        taskId: { type: 'string', description: 'For retrying an uncertain send, reuse the taskId returned with the error; omit for a new task.' },
+        room: { type: 'string', description: 'Room code.' },
+        to: { type: 'string', description: 'Recipient userId.' },
+        env: { type: 'string', description: 'Environment key as configured by the recipient.' },
+        title: { type: 'string', description: 'Short task title, at most 120 characters.' },
+        brief: { type: 'string', description: 'Task brief, at most 8 KiB UTF-8.' },
+      },
+      required: ['room', 'to', 'env', 'title', 'brief'],
     },
     output: { schema: { type: 'string' }, render: (_args, value) => text(value) },
     async execute(args) {
@@ -333,7 +337,7 @@ export async function apply(ctx, config) {
   ctx.effect(() => ctx.tools.register({
     name: 'team_tasks',
     description: 'List Baton tasks related to this install with ids and status only. Remote titles, briefs, display names, and room names never enter the current agent context.',
-    parameters: {},
+    parameters: { type: 'object', properties: {} },
     output: { schema: { type: 'string' }, render: (_args, value) => text(value) },
     async execute() {
       try {

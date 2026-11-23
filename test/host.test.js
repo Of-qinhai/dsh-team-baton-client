@@ -94,6 +94,21 @@ async function fixture(run, options = {}) {
   }
 }
 
+test('registered agent tools expose object JSON Schemas', () => fixture(async ({ tools }) => {
+  for (const name of ['team_rooms', 'team_tasks']) {
+    assert.deepEqual(tools.get(name).parameters, { type: 'object', properties: {} })
+  }
+  const schema = tools.get('team_task_send').parameters
+  const required = ['room', 'to', 'env', 'title', 'brief']
+  assert.equal(schema.type, 'object')
+  assert.deepEqual(schema.required, required)
+  assert.deepEqual(Object.keys(schema.properties).sort(), ['taskId', ...required].sort())
+  for (const property of Object.values(schema.properties)) {
+    assert.equal(property.type, 'string')
+    assert.equal(Object.hasOwn(property, 'required'), false)
+  }
+}))
+
 test('accept submits the recipient-edited brief and keeps the sender original', () => fixture(async ({ task, panel, calls, cwd, base }) => {
   const revised = 'Corrected goal: review only the login flow.'
   const result = await panel({ action: 'accept', taskId: task.taskId, cwd, brief: revised })
